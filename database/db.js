@@ -193,7 +193,7 @@ export function initDB() {
     // Auto-restore database tables from persistent JSON backup if DB was reset
     try {
       const { restoreBackup } = require("./backup");
-      restoreBackup();
+      restoreBackup(db);
     } catch (e) {
       console.error("Auto-restore backup error:", e);
     }

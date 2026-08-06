@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import db from "@/database/db";
 
 // File path for persistent JSON database backup
 function getBackupFilePath() {
@@ -10,8 +9,12 @@ function getBackupFilePath() {
 /**
  * Save snapshot of all database tables to persistent JSON backup file
  */
-export function saveBackup() {
+export function saveBackup(db) {
   try {
+    if (!db) {
+      db = require("./db").default;
+    }
+
     const backupData = {
       users: db.prepare("SELECT * FROM users").all(),
       dispatches: db.prepare("SELECT * FROM dispatches").all(),
@@ -34,8 +37,12 @@ export function saveBackup() {
 /**
  * Restore database tables from JSON backup file if SQLite was reset or cleared
  */
-export function restoreBackup() {
+export function restoreBackup(db) {
   try {
+    if (!db) {
+      db = require("./db").default;
+    }
+
     const filePath = getBackupFilePath();
     if (!fs.existsSync(filePath)) {
       return false;
@@ -48,9 +55,8 @@ export function restoreBackup() {
     if (!data) return false;
 
     db.transaction(() => {
-      // 1. Restore Users (if not existing)
+      // 1. Restore Users
       if (Array.isArray(data.users)) {
-        const checkUser = db.prepare("SELECT id FROM users WHERE employee_id = ?");
         const insertUser = db.prepare(`
           INSERT OR REPLACE INTO users (id, employee_id, full_name, email, password_hash, role, status, first_login, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
