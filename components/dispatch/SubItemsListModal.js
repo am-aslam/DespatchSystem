@@ -87,7 +87,7 @@ export default function SubItemsListModal({
     { gross: 0, stone: 0, pearl: 0, ad: 0, net: 0 }
   );
 
-  // Bulletproof Dedicated Window Print Handler for List Access Breakdown Table
+  // Dedicated Window Print Handler for List Access Breakdown Table
   const handlePrintBatchList = () => {
     const printWindow = window.open("", "_blank", "width=900,height=700");
 
@@ -219,22 +219,22 @@ export default function SubItemsListModal({
     >
       <div className="space-y-4">
         
-        {/* Table View of Sub-Items */}
-        <div className="border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[420px] overflow-y-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917] sticky top-0">
+        {/* Scrollable Container with Horizontal & Vertical Scroll for Full Column Visibility */}
+        <div className="border border-[#E7E3DA] rounded-xl overflow-x-auto overflow-y-auto bg-white max-h-[420px] max-w-full">
+          <table className="w-full min-w-[950px] text-left border-collapse text-xs">
+            <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917] sticky top-0 z-10">
               <tr>
-                <th className="p-3 font-bold text-center">Verify</th>
-                <th className="p-3 font-bold">#</th>
-                <th className="p-3 font-bold">Item No</th>
-                <th className="p-3 font-bold">Assigned Staff</th>
-                <th className="p-3 font-bold text-right">Gross Wt</th>
-                <th className="p-3 font-bold text-right">Total Stone</th>
-                <th className="p-3 font-bold text-right">AD Wt</th>
-                <th className="p-3 font-bold text-right">Pearl Wt</th>
-                <th className="p-3 font-bold text-right">Net Wt</th>
-                <th className="p-3 font-bold text-center">Status</th>
-                <th className="p-3 font-bold text-center">Actions</th>
+                <th className="p-3 font-bold text-center w-12">Verify</th>
+                <th className="p-3 font-bold w-10">#</th>
+                <th className="p-3 font-bold w-32">Item No</th>
+                <th className="p-3 font-bold w-44">Assigned Staff</th>
+                <th className="p-3 font-bold text-right w-24">Gross Wt</th>
+                <th className="p-3 font-bold text-right w-24">Total Stone</th>
+                <th className="p-3 font-bold text-right w-24">AD Wt</th>
+                <th className="p-3 font-bold text-right w-24">Pearl Wt</th>
+                <th className="p-3 font-bold text-right w-28">Net Wt</th>
+                <th className="p-3 font-bold text-center w-24">Status</th>
+                <th className="p-3 font-bold text-center w-24 bg-[#FAF8F5] sticky right-0 shadow-xs">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E3DA]">
@@ -305,12 +305,12 @@ export default function SubItemsListModal({
                           </span>
                         )}
                       </td>
-                      <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="p-3 text-center sticky right-0 bg-white hover:bg-[#FAF8F5] shadow-xs">
+                        <div className="flex items-center justify-center gap-1.5">
                           {(isAdmin || isManager) && (
                             <button
                               onClick={() => handleStartEdit(item)}
-                              className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
+                              className="p-1.5 rounded-lg text-stone-700 hover:text-[#1C1917] hover:bg-[#FAF8F5] border border-transparent hover:border-[#E7E3DA] transition-all"
                               title="Edit Ornament"
                             >
                               <PencilSquareIcon className="w-4 h-4" />
@@ -319,8 +319,8 @@ export default function SubItemsListModal({
                           {(isAdmin || isManager) && (
                             <button
                               onClick={() => deleteSubItem(parentBatch.id, item.id)}
-                              className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
-                              title="Delete Ornament directly"
+                              className="p-1.5 rounded-lg text-[#DC2626] hover:bg-[#DC2626]/10 border border-transparent transition-all"
+                              title="Delete Ornament"
                             >
                               <TrashIcon className="w-4 h-4" />
                             </button>
