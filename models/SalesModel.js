@@ -12,7 +12,7 @@ export class SalesModel {
 
   static findById(id) {
     const stmt = db.prepare(`
-      SELECT s.*, u.name as salesperson_name
+      SELECT s.*, u.full_name as salesperson_name
       FROM sales_history s
       JOIN users u ON s.salesperson_id = u.id
       WHERE s.id = ?
@@ -22,7 +22,7 @@ export class SalesModel {
 
   static getAll({ salespersonId = null, role = "ADMIN" }) {
     let query = `
-      SELECT s.*, u.name as salesperson_name
+      SELECT s.*, u.full_name as salesperson_name
       FROM sales_history s
       JOIN users u ON s.salesperson_id = u.id
     `;

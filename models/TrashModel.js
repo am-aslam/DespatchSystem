@@ -12,7 +12,6 @@ export class TrashModel {
     net_weight,
     status,
   }) {
-    // Expiration date set to +24 hours from creation
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     const stmt = db.prepare(`
@@ -42,7 +41,7 @@ export class TrashModel {
 
   static findById(id) {
     const stmt = db.prepare(`
-      SELECT t.*, u.name as salesperson_name
+      SELECT t.*, u.full_name as salesperson_name
       FROM trash t
       JOIN users u ON t.salesperson_id = u.id
       WHERE t.id = ?
@@ -52,7 +51,7 @@ export class TrashModel {
 
   static getTrash({ userId, role }) {
     let query = `
-      SELECT t.*, u.name as salesperson_name
+      SELECT t.*, u.full_name as salesperson_name
       FROM trash t
       JOIN users u ON t.salesperson_id = u.id
     `;

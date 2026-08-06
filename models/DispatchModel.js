@@ -12,7 +12,7 @@ export class DispatchModel {
 
   static findById(id) {
     const stmt = db.prepare(`
-      SELECT d.*, u.name as creator_name
+      SELECT d.*, u.full_name as creator_name
       FROM dispatch_items d
       JOIN users u ON d.created_by = u.id
       WHERE d.id = ?
@@ -21,7 +21,7 @@ export class DispatchModel {
     if (!item) return null;
 
     const assignedUsers = db.prepare(`
-      SELECT u.id, u.name, u.email, u.role
+      SELECT u.id, u.employee_id, u.full_name as name, u.email, u.role
       FROM users u
       JOIN assignments a ON u.id = a.user_id
       WHERE a.dispatch_id = ?
@@ -59,8 +59,8 @@ export class DispatchModel {
     // Search query
     if (search && search.trim() !== "") {
       const q = `%${search.trim()}%`;
-      whereConditions.push("(d.item_number LIKE ? OR u.name LIKE ?)");
-      params.push(q, q);
+      whereConditions.push("(d.item_number LIKE ? OR u.full_name LIKE ? OR u.employee_id LIKE ?)");
+      params.push(q, q, q);
     }
 
     // Date Filtering
@@ -94,7 +94,7 @@ export class DispatchModel {
     const offset = (page - 1) * limit;
 
     const itemsQuery = `
-      SELECT d.*, u.name as creator_name
+      SELECT d.*, u.full_name as creator_name
       FROM dispatch_items d
       JOIN users u ON d.created_by = u.id
       ${whereClause}
@@ -106,7 +106,7 @@ export class DispatchModel {
 
     // Attach assignments for each dispatch item
     const assignStmt = db.prepare(`
-      SELECT u.id, u.name, u.email
+      SELECT u.id, u.employee_id, u.full_name as name, u.email
       FROM users u
       JOIN assignments a ON u.id = a.user_id
       WHERE a.dispatch_id = ?

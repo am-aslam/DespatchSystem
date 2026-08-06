@@ -62,7 +62,7 @@ export class TotalsController {
 
   static async getUserTotals(req, user) {
     try {
-      const salespersons = db.prepare("SELECT id, name, email, role FROM users WHERE role = 'SALESPERSON'").all();
+      const salespersons = db.prepare("SELECT id, employee_id, full_name as name, email, role FROM users WHERE role = 'SALESPERSON'").all();
 
       const userStats = salespersons.map((sp) => {
         // Assigned Active Dispatches
@@ -98,6 +98,7 @@ export class TotalsController {
 
         return {
           user_id: sp.id,
+          employee_id: sp.employee_id,
           name: sp.name,
           email: sp.email,
           assigned_count: assignedStats.assigned_count,

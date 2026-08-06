@@ -37,7 +37,7 @@ export class PrintController {
       const printPayload = {
         title: "GOLD ORNAMENTS SALES DISPATCH SHEET",
         generated_at: new Date().toISOString(),
-        generated_by: user.name,
+        generated_by: user.full_name || user.name,
         total_items: items.length,
         items: items.map((i) => ({
           item_number: i.item_number,
@@ -45,7 +45,7 @@ export class PrintController {
           stone_weight: parseFloat(i.stone_weight.toFixed(3)),
           pearl_weight: parseFloat(i.pearl_weight.toFixed(3)),
           net_weight: parseFloat(i.net_weight.toFixed(3)),
-          assigned_staff: i.assigned_users?.map((u) => u.name).join(", ") || "Unassigned",
+          assigned_staff: i.assigned_users?.map((u) => u.name || u.full_name).join(", ") || "Unassigned",
         })),
         totals: {
           gross_weight: parseFloat(totals.gross_weight.toFixed(3)),

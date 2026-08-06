@@ -20,7 +20,7 @@ export class AssignmentModel {
 
   static getAssignedUsersForDispatch(dispatchId) {
     const stmt = db.prepare(`
-      SELECT u.id, u.name, u.email, u.role
+      SELECT u.id, u.employee_id, u.full_name as name, u.email, u.role
       FROM users u
       JOIN assignments a ON u.id = a.user_id
       WHERE a.dispatch_id = ?

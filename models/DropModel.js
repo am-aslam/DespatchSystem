@@ -12,7 +12,7 @@ export class DropModel {
 
   static findById(id) {
     const stmt = db.prepare(`
-      SELECT d.*, u.name as salesperson_name
+      SELECT d.*, u.full_name as salesperson_name
       FROM drop_history d
       JOIN users u ON d.salesperson_id = u.id
       WHERE d.id = ?
@@ -22,7 +22,7 @@ export class DropModel {
 
   static getAll({ salespersonId = null, role = "ADMIN" }) {
     let query = `
-      SELECT d.*, u.name as salesperson_name
+      SELECT d.*, u.full_name as salesperson_name
       FROM drop_history d
       JOIN users u ON d.salesperson_id = u.id
     `;

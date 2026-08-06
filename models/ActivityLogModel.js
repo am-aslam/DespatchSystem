@@ -12,7 +12,7 @@ export class ActivityLogModel {
 
   static getLogs({ limit = 100, userId = null }) {
     let query = `
-      SELECT a.*, u.name as user_name, u.role as user_role
+      SELECT a.*, u.full_name as user_name, u.role as user_role
       FROM activity_logs a
       JOIN users u ON a.user_id = u.id
     `;
