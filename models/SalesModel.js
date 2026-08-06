@@ -1,4 +1,5 @@
 import db from "@/database/db";
+import { saveBackup } from "@/database/backup";
 
 export class SalesModel {
   static create({ dispatch_id, salesperson_id, gross_weight, stone_weight, pearl_weight, net_weight, remarks = "" }) {
@@ -7,6 +8,7 @@ export class SalesModel {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(dispatch_id, salesperson_id, gross_weight, stone_weight, pearl_weight, net_weight, remarks);
+    saveBackup();
     return this.findById(info.lastInsertRowid);
   }
 
@@ -14,7 +16,7 @@ export class SalesModel {
     const stmt = db.prepare(`
       SELECT s.*, u.full_name as salesperson_name
       FROM sales_history s
-      JOIN users u ON s.salesperson_id = u.id
+      LEFT JOIN users u ON s.salesperson_id = u.id
       WHERE s.id = ?
     `);
     return stmt.get(id);
@@ -24,7 +26,7 @@ export class SalesModel {
     let query = `
       SELECT s.*, u.full_name as salesperson_name
       FROM sales_history s
-      JOIN users u ON s.salesperson_id = u.id
+      LEFT JOIN users u ON s.salesperson_id = u.id
     `;
     let params = [];
 
@@ -49,11 +51,14 @@ export class SalesModel {
       WHERE id = ?
     `);
     stmt.run(gross_weight, stone_weight, pearl_weight, net_weight, salesperson_id, remarks, id);
+    saveBackup();
     return this.findById(id);
   }
 
   static delete(id) {
     const stmt = db.prepare("DELETE FROM sales_history WHERE id = ?");
-    return stmt.run(id);
+    const result = stmt.run(id);
+    saveBackup();
+    return result;
   }
 }

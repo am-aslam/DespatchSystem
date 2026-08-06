@@ -189,6 +189,14 @@ export function initDB() {
     db.pragma("foreign_keys = ON");
 
     seedDefaultUsers();
+
+    // Auto-restore database tables from persistent JSON backup if DB was reset
+    try {
+      const { restoreBackup } = require("./backup");
+      restoreBackup();
+    } catch (e) {
+      console.error("Auto-restore backup error:", e);
+    }
   } catch (err) {
     console.error("Database initialization error:", err);
   }

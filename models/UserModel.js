@@ -1,4 +1,5 @@
 import db from "@/database/db";
+import { saveBackup } from "@/database/backup";
 
 export class UserModel {
   static findByEmployeeId(employee_id) {
@@ -31,6 +32,7 @@ export class UserModel {
       VALUES (?, ?, ?, NULL, ?, ?, 1)
     `);
     const info = stmt.run(employee_id, full_name, email, role, status);
+    saveBackup();
     return this.findById(info.lastInsertRowid);
   }
 
@@ -41,6 +43,7 @@ export class UserModel {
       WHERE id = ?
     `);
     stmt.run(password_hash, id);
+    saveBackup();
     return this.findById(id);
   }
 
@@ -51,6 +54,7 @@ export class UserModel {
       WHERE id = ?
     `);
     stmt.run(id);
+    saveBackup();
     return this.findById(id);
   }
 
@@ -61,11 +65,14 @@ export class UserModel {
       WHERE id = ?
     `);
     stmt.run(status, id);
+    saveBackup();
     return this.findById(id);
   }
 
   static delete(id) {
     const stmt = db.prepare("DELETE FROM users WHERE id = ?");
-    return stmt.run(id);
+    const result = stmt.run(id);
+    saveBackup();
+    return result;
   }
 }

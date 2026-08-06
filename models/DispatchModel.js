@@ -1,4 +1,5 @@
 import db from "@/database/db";
+import { saveBackup } from "@/database/backup";
 
 export class DispatchModel {
   // Create a new Dispatch Batch containing multiple ornaments (1-to-Many)
@@ -55,6 +56,7 @@ export class DispatchModel {
     });
 
     transaction();
+    saveBackup();
     return this.findDispatchById(dispatchId);
   }
 
@@ -313,8 +315,13 @@ export class DispatchModel {
 
   static deleteDispatch(dispatchId) {
     try {
-      const stmt = db.prepare("DELETE FROM dispatches WHERE id = ? OR dispatch_no = ?");
-      return stmt.run(dispatchId, dispatchId);
+      db.transaction(() => {
+        db.prepare("DELETE FROM dispatch_items WHERE dispatch_id = ? OR dispatch_id IN (SELECT id FROM dispatches WHERE dispatch_no = ?)").run(dispatchId, dispatchId);
+        db.prepare("DELETE FROM assignments WHERE dispatch_id = ? OR dispatch_id IN (SELECT id FROM dispatches WHERE dispatch_no = ?)").run(dispatchId, dispatchId);
+        db.prepare("DELETE FROM dispatches WHERE id = ? OR dispatch_no = ?").run(dispatchId, dispatchId);
+      })();
+      saveBackup();
+      return true;
     } catch (err) {
       console.error("Error in deleteDispatch:", err);
     }
@@ -323,7 +330,9 @@ export class DispatchModel {
   static deleteItem(itemId) {
     try {
       const stmt = db.prepare("DELETE FROM dispatch_items WHERE id = ?");
-      return stmt.run(itemId);
+      const result = stmt.run(itemId);
+      saveBackup();
+      return result;
     } catch (err) {
       console.error("Error in deleteItem:", err);
     }

@@ -1,4 +1,5 @@
 import db from "@/database/db";
+import { saveBackup } from "@/database/backup";
 
 export class TrashModel {
   static create({
@@ -13,7 +14,8 @@ export class TrashModel {
     status,
     remarks = "",
   }) {
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    // 10 years permanent retention in trash (3650 days)
+    const expiresAt = new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString();
 
     const stmt = db.prepare(`
       INSERT INTO trash (
@@ -38,6 +40,7 @@ export class TrashModel {
       expiresAt
     );
 
+    saveBackup();
     return this.findById(info.lastInsertRowid);
   }
 
@@ -45,7 +48,7 @@ export class TrashModel {
     const stmt = db.prepare(`
       SELECT t.*, u.full_name as salesperson_name
       FROM trash t
-      JOIN users u ON t.salesperson_id = u.id
+      LEFT JOIN users u ON t.salesperson_id = u.id
       WHERE t.id = ?
     `);
     return stmt.get(id);
@@ -55,7 +58,7 @@ export class TrashModel {
     let query = `
       SELECT t.*, u.full_name as salesperson_name
       FROM trash t
-      JOIN users u ON t.salesperson_id = u.id
+      LEFT JOIN users u ON t.salesperson_id = u.id
     `;
     let params = [];
 
@@ -70,6 +73,8 @@ export class TrashModel {
 
   static delete(id) {
     const stmt = db.prepare("DELETE FROM trash WHERE id = ?");
-    return stmt.run(id);
+    const result = stmt.run(id);
+    saveBackup();
+    return result;
   }
 }

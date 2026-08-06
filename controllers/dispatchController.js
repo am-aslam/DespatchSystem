@@ -125,10 +125,11 @@ export class DispatchController {
         return successResponse(result, `Dispatch item marked as ${status} successfully`);
       } else {
         // Direct deletion of dispatch batch or item
-        if (!isNaN(id)) {
-          DispatchModel.deleteItem(id);
-        } else {
+        const existingDispatch = DispatchModel.findDispatchById(id);
+        if (existingDispatch) {
           DispatchModel.deleteDispatch(id);
+        } else {
+          DispatchModel.deleteItem(id);
         }
 
         ActivityLogModel.log(
