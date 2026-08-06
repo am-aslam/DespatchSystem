@@ -1,13 +1,29 @@
 import fs from "fs";
 import path from "path";
 
-// File path for persistent JSON database backup
+// File path for persistent JSON database backup (Safe for Vercel read-only filesystem)
 function getBackupFilePath() {
-  return path.join(process.cwd(), "gold_sales_backup.json");
+  const isServerless = Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV
+  );
+
+  if (isServerless) {
+    return path.join("/tmp", "gold_sales_backup.json");
+  }
+
+  try {
+    const p = path.join(process.cwd(), "gold_sales_backup.json");
+    fs.accessSync(process.cwd(), fs.constants.W_OK);
+    return p;
+  } catch (e) {
+    return path.join("/tmp", "gold_sales_backup.json");
+  }
 }
 
 /**
- * Save snapshot of all database tables to persistent JSON backup file
+ * Save snapshot of all database tables to persistent JSON backup file & Node global cache
  */
 export function saveBackup(db) {
   try {
@@ -27,6 +43,10 @@ export function saveBackup(db) {
       saved_at: new Date().toISOString(),
     };
 
+    // Save to Node global memory cache
+    global._gold_sales_store = backupData;
+
+    // Save to disk backup
     const filePath = getBackupFilePath();
     fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf-8");
   } catch (err) {
@@ -35,7 +55,7 @@ export function saveBackup(db) {
 }
 
 /**
- * Restore database tables from JSON backup file if SQLite was reset or cleared
+ * Restore database tables from JSON backup file or global memory cache
  */
 export function restoreBackup(db) {
   try {
@@ -43,20 +63,23 @@ export function restoreBackup(db) {
       db = require("./db").default;
     }
 
-    const filePath = getBackupFilePath();
-    if (!fs.existsSync(filePath)) {
-      return false;
+    let data = global._gold_sales_store;
+
+    if (!data) {
+      const filePath = getBackupFilePath();
+      if (fs.existsSync(filePath)) {
+        const fileContent = fs.readFileSync(filePath, "utf-8");
+        if (fileContent && fileContent.trim()) {
+          data = JSON.parse(fileContent);
+        }
+      }
     }
 
-    const fileContent = fs.readFileSync(filePath, "utf-8");
-    if (!fileContent || !fileContent.trim()) return false;
-
-    const data = JSON.parse(fileContent);
     if (!data) return false;
 
     db.transaction(() => {
       // 1. Restore Users
-      if (Array.isArray(data.users)) {
+      if (Array.isArray(data.users) && data.users.length > 0) {
         const insertUser = db.prepare(`
           INSERT OR REPLACE INTO users (id, employee_id, full_name, email, password_hash, role, status, first_login, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -217,7 +240,7 @@ export function restoreBackup(db) {
       }
     })();
 
-    console.log("Database successfully restored from JSON backup!");
+    console.log("Database successfully restored from JSON backup / memory cache!");
     return true;
   } catch (err) {
     console.error("Failed to restore database from backup:", err);

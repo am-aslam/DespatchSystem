@@ -184,6 +184,12 @@ export function initDB() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
+    // 9. Speed Indexes for ultra-fast query performance
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_dispatch_items_dispatch ON dispatch_items(dispatch_id);
+      CREATE INDEX IF NOT EXISTS idx_assignments_dispatch_user ON assignments(dispatch_id, user_id);
+      CREATE INDEX IF NOT EXISTS idx_sales_salesperson ON sales_history(salesperson_id);
+      CREATE INDEX IF NOT EXISTS idx_trash_salesperson ON trash(salesperson_id);
     `);
 
     db.pragma("foreign_keys = ON");

@@ -34,20 +34,19 @@ export function DispatchProvider({ children }) {
     return parseFloat(Math.max(0, g - s).toFixed(3));
   };
 
-  // Fetch live dispatches, sales, and trash from backend API
+  // Fetch live dispatches, sales, and trash from backend API in 1 fast unified HTTP call
   const fetchAllData = useCallback(async () => {
     if (!currentUser) return;
     try {
-      // 1. Fetch Dispatches from SQL backend
-      const dispatchesRes = await axios.get(
-        `/api/dispatches?search=${encodeURIComponent(searchQuery)}&date=${dateFilter}`
+      const res = await axios.get(
+        `/api/init-data?search=${encodeURIComponent(searchQuery)}&date=${dateFilter}`
       );
-      if (dispatchesRes.data?.success) {
-        const payload = dispatchesRes.data.data;
+      if (res.data?.success) {
+        const { dispatches, sales, trash: rawTrash } = res.data.data;
 
-        if (payload?.isGrouped) {
-          // SQL Grouped Data from Backend (One Object Per Dispatch Lot)
-          const rawGroups = payload.items || [];
+        // 1. Format Dispatches
+        if (dispatches?.isGrouped) {
+          const rawGroups = dispatches.items || [];
           setBatches(
             rawGroups.map((g) => ({
               id: g.dispatch_no || g.id,
@@ -66,9 +65,8 @@ export function DispatchProvider({ children }) {
               items: [],
             }))
           );
-        } else {
-          // Individual Ornament Data (for Salespersons)
-          const rawItems = payload?.items || [];
+        } else if (dispatches?.items) {
+          const rawItems = dispatches.items || [];
           const formattedItems = rawItems.map((item) => ({
             id: item.id.toString(),
             itemNo: item.item_number,
@@ -82,49 +80,45 @@ export function DispatchProvider({ children }) {
           }));
           setAllItemizedOrnaments(formattedItems);
         }
-      }
 
-      // 2. Fetch Sales History with remarks note
-      const salesRes = await axios.get("/api/sales");
-      if (salesRes.data?.success) {
-        const rawSales = salesRes.data.data || [];
-        setSalesHistory(
-          rawSales.map((s) => ({
-            id: s.id.toString(),
-            itemNo: s.dispatch_id ? `GLD-${s.dispatch_id}` : `SALE-${s.id}`,
-            name: "Gold Ornament",
-            grossWeight: s.gross_weight,
-            stoneWeight: s.stone_weight,
-            pearlWeight: s.pearl_weight,
-            netWeight: s.net_weight,
-            soldBy: s.salesperson_name || "Sales Executive",
-            soldDate: s.sale_date,
-            remarks: s.remarks || "",
-            isVerified: true,
-          }))
-        );
-      }
+        // 2. Format Sales History
+        if (Array.isArray(sales)) {
+          setSalesHistory(
+            sales.map((s) => ({
+              id: s.id.toString(),
+              itemNo: s.dispatch_id ? `GLD-${s.dispatch_id}` : `SALE-${s.id}`,
+              name: "Gold Ornament",
+              grossWeight: s.gross_weight,
+              stoneWeight: s.stone_weight,
+              pearlWeight: s.pearl_weight,
+              netWeight: s.net_weight,
+              soldBy: s.salesperson_name || "Sales Executive",
+              soldDate: s.sale_date,
+              remarks: s.remarks || "",
+              isVerified: true,
+            }))
+          );
+        }
 
-      // 3. Fetch Trash with remarks note
-      const trashRes = await axios.get("/api/trash");
-      if (trashRes.data?.success) {
-        const rawTrash = trashRes.data.data || [];
-        setTrash(
-          rawTrash.map((t) => ({
-            id: t.id.toString(),
-            itemNo: t.item_number,
-            name: t.item_name || "Gold Ornament",
-            grossWeight: t.gross_weight,
-            stoneWeight: t.stone_weight,
-            pearlWeight: t.pearl_weight,
-            netWeight: t.net_weight,
-            status: t.status,
-            reason: `${t.status} item`,
-            remarks: t.remarks || `${t.status} item`,
-            deletedBy: t.salesperson_name || "Admin",
-            deletedDate: t.deleted_at,
-          }))
-        );
+        // 3. Format Trash
+        if (Array.isArray(rawTrash)) {
+          setTrash(
+            rawTrash.map((t) => ({
+              id: t.id.toString(),
+              itemNo: t.item_number,
+              name: t.item_name || "Gold Ornament",
+              grossWeight: t.gross_weight,
+              stoneWeight: t.stone_weight,
+              pearlWeight: t.pearl_weight,
+              netWeight: t.net_weight,
+              status: t.status,
+              reason: `${t.status} item`,
+              remarks: t.remarks || `${t.status} item`,
+              deletedBy: t.salesperson_name || "Admin",
+              deletedDate: t.deleted_at,
+            }))
+          );
+        }
       }
     } catch (err) {
       console.error("Error fetching live dispatch data:", err);
