@@ -197,7 +197,8 @@ export default function UserManagementView() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs">
+        <div className="overflow-x-auto w-full">
         <table className="w-full text-left border-collapse min-w-[800px] text-xs">
           <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
             <tr>
@@ -302,6 +303,7 @@ export default function UserManagementView() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Create New Employee Modal */}

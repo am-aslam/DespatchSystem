@@ -97,7 +97,7 @@ export default function DispatchTable({ onOpenAddModal }) {
       )}
 
       {/* Main Table Scroll Container */}
-      <div className="flex-1 overflow-auto relative">
+      <div className="flex-1 overflow-x-auto overflow-y-auto relative">
         
         {/* VIEW 1: ADMIN & MANAGER GROUPED DISPATCH VIEW (One Row Per Dispatch) */}
         {!isSalesperson && (

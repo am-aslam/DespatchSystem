@@ -43,6 +43,19 @@
   background: #A89F91;
 }
 
+/* ─── Mobile Touch Scrolling ───────────────────────────────────────────── */
+/* Smooth finger-swipe scrolling on iOS Safari & Android Chrome */
+.overflow-auto,
+.overflow-x-auto,
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent tables from breaking layout on mobile */
+table {
+  border-collapse: collapse;
+}
+
 /* Print specific styles */
 @media print {
   body {
