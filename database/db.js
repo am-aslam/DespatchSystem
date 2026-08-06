@@ -77,8 +77,10 @@ export function initDB() {
         stone_weight REAL NOT NULL DEFAULT 0.0,
         pearl_weight REAL NOT NULL DEFAULT 0.0,
         net_weight REAL NOT NULL,
+        created_by INTEGER NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (dispatch_id) REFERENCES dispatches(id) ON DELETE CASCADE
+        FOREIGN KEY (dispatch_id) REFERENCES dispatches(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
 
