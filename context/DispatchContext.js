@@ -44,32 +44,70 @@ export function DispatchProvider({ children }) {
       if (dispatchesRes.data?.success) {
         const rawItems = dispatchesRes.data.data?.items || [];
         
-        // Group raw items into batch rows or format appropriately
-        const formattedBatches = rawItems.map((item) => ({
-          id: item.id.toString(),
-          batchNo: item.item_number,
-          name: "Gold Ornament",
-          assignedSalespeople: item.assigned_users?.map((u) => u.full_name || u.name) || [],
-          date: item.created_at,
-          status: "Active",
-          grossWeight: item.gross_weight,
-          stoneWeight: item.stone_weight,
-          pearlWeight: item.pearl_weight,
-          netWeight: item.net_weight,
-          itemCount: 1,
-          items: [
-            {
-              id: item.id.toString(),
-              itemNo: item.item_number,
-              name: "Gold Ornament",
-              grossWeight: item.gross_weight,
-              stoneWeight: item.stone_weight,
-              pearlWeight: item.pearl_weight,
-              netWeight: item.net_weight,
-              isVerified: Boolean(item.is_verified),
-            },
-          ],
+        // Group raw items by Base Dispatch Number for Admin / Manager Grouped View
+        const batchMap = new Map();
+
+        rawItems.forEach((item) => {
+          const parts = item.item_number.split("-");
+          const baseBatchNo = parts.length > 2 ? parts.slice(0, 2).join("-") : item.item_number;
+          const assignedStaff = item.assigned_users?.map((u) => u.name || u.full_name) || [];
+
+          if (!batchMap.has(baseBatchNo)) {
+            batchMap.set(baseBatchNo, {
+              id: baseBatchNo,
+              batchNo: baseBatchNo,
+              name: "Gold Ornaments Lot",
+              assignedSalespeople: [...assignedStaff],
+              date: item.created_at,
+              status: "Active",
+              grossWeight: 0,
+              stoneWeight: 0,
+              pearlWeight: 0,
+              netWeight: 0,
+              items: [],
+            });
+          }
+
+          const currentBatch = batchMap.get(baseBatchNo);
+
+          const g = parseFloat(item.gross_weight) || 0;
+          const s = parseFloat(item.stone_weight) || 0;
+          const p = parseFloat(item.pearl_weight) || 0;
+          const n = parseFloat(item.net_weight) || 0;
+
+          currentBatch.grossWeight += g;
+          currentBatch.stoneWeight += s;
+          currentBatch.pearlWeight += p;
+          currentBatch.netWeight += n;
+
+          assignedStaff.forEach((sp) => {
+            if (!currentBatch.assignedSalespeople.includes(sp)) {
+              currentBatch.assignedSalespeople.push(sp);
+            }
+          });
+
+          currentBatch.items.push({
+            id: item.id.toString(),
+            itemNo: item.item_number,
+            name: "Gold Ornament",
+            grossWeight: g,
+            stoneWeight: s,
+            pearlWeight: p,
+            netWeight: n,
+            isVerified: Boolean(item.is_verified),
+            assignedSalespeople: assignedStaff,
+          });
+        });
+
+        const formattedBatches = Array.from(batchMap.values()).map((b) => ({
+          ...b,
+          itemCount: b.items.length,
+          grossWeight: parseFloat(b.grossWeight.toFixed(3)),
+          stoneWeight: parseFloat(b.stoneWeight.toFixed(3)),
+          pearlWeight: parseFloat(b.pearlWeight.toFixed(3)),
+          netWeight: parseFloat(b.netWeight.toFixed(3)),
         }));
+
         setBatches(formattedBatches);
       }
 
@@ -173,10 +211,18 @@ export function DispatchProvider({ children }) {
   // Direct Delete Batch (Admin / Manager)
   const deleteBatch = async (batchId) => {
     try {
-      await axios.delete(`/api/dispatches/${batchId}`);
+      const targetBatch = batches.find((b) => b.id === batchId);
+      if (targetBatch && targetBatch.items?.length > 0) {
+        for (const item of targetBatch.items) {
+          await axios.delete(`/api/dispatches/${item.id}`);
+        }
+      } else {
+        await axios.delete(`/api/dispatches/${batchId}`);
+      }
+
       setBatches((prev) => prev.filter((b) => b.id !== batchId));
       setSelectedBatchIds((prev) => prev.filter((id) => id !== batchId));
-      showToast("Moved item to trash", "success");
+      showToast("Moved batch to trash", "success");
       fetchAllData();
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to delete item", "danger");
@@ -203,7 +249,13 @@ export function DispatchProvider({ children }) {
   };
 
   const deleteSubItem = async (batchId, itemId) => {
-    deleteBatch(itemId || batchId);
+    try {
+      await axios.delete(`/api/dispatches/${itemId}`);
+      showToast("Sub-item deleted", "success");
+      fetchAllData();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to delete sub-item", "danger");
+    }
   };
 
   const updateSubItem = (batchId, itemId, data) => {
@@ -258,7 +310,9 @@ export function DispatchProvider({ children }) {
   const filteredBatches = useMemo(() => {
     return batches.filter((batch) => {
       if (assignedFilter !== "ALL") {
-        const matchesSp = batch.assignedSalespeople?.includes(assignedFilter);
+        const matchesSp = batch.assignedSalespeople?.some(
+          (sp) => sp.toLowerCase().includes(assignedFilter.toLowerCase())
+        );
         if (!matchesSp) return false;
       }
       return true;

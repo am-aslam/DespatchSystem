@@ -72,7 +72,7 @@ export default function DispatchTable({ onOpenAddModal }) {
         <div className="bg-[#292524] text-white px-4 py-2 flex items-center justify-between no-print">
           <div className="flex items-center gap-2 text-xs">
             <span className="font-bold">
-              {selectedBatchIds.length} Batch(es) Selected
+              {selectedBatchIds.length} Dispatch(es) Selected
             </span>
           </div>
 
@@ -99,7 +99,7 @@ export default function DispatchTable({ onOpenAddModal }) {
       {/* Main Table Scroll Container */}
       <div className="flex-1 overflow-auto relative">
         
-        {/* VIEW 1: ADMIN & MANAGER BATCH AGGREGATED VIEW */}
+        {/* VIEW 1: ADMIN & MANAGER GROUPED DISPATCH VIEW (One Row Per Dispatch) */}
         {!isSalesperson && (
           <table className="w-full text-left border-collapse min-w-[850px] text-xs">
             <thead className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
@@ -112,9 +112,9 @@ export default function DispatchTable({ onOpenAddModal }) {
                     className="w-4 h-4 text-[#292524] rounded border-[#E7E3DA] focus:ring-[#292524] cursor-pointer"
                   />
                 </th>
-                <th className="px-4 py-3 font-bold">Item No</th>
-                <th className="px-4 py-3 font-bold">Ornament Description</th>
+                <th className="px-4 py-3 font-bold">Dispatch No</th>
                 <th className="px-4 py-3 font-bold">Assigned Staff</th>
+                <th className="px-4 py-3 font-bold text-center">Items</th>
                 <th className="px-4 py-3 font-bold text-right">Gross Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-right">AD Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-right">Pearl Wt (g)</th>
@@ -141,25 +141,26 @@ export default function DispatchTable({ onOpenAddModal }) {
                           className="w-4 h-4 text-[#292524] rounded border-[#E7E3DA] focus:ring-[#292524] cursor-pointer"
                         />
                       </td>
-                      <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
+                      <td className="px-4 py-3 font-black text-[#1C1917] text-sm tracking-tight">
                         {batch.batchNo}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-[#1C1917] flex items-center gap-2">
-                          <span>{batch.name}</span>
-                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-[#F5F2EC] text-[#44403C] border border-[#E7E3DA]">
-                            {batch.itemCount} Items
-                          </span>
+                        <div className="flex flex-wrap gap-1">
+                          {batch.assignedSalespeople?.length > 0 ? (
+                            batch.assignedSalespeople.map((sp) => (
+                              <Badge key={sp} variant="stone" size="sm">
+                                {sp}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-stone-400 italic">Unassigned</span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {batch.assignedSalespeople?.map((sp) => (
-                            <Badge key={sp} variant="stone" size="sm">
-                              {sp}
-                            </Badge>
-                          ))}
-                        </div>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-xs font-extrabold px-2.5 py-1 rounded bg-[#F5F2EC] text-[#1C1917] border border-[#E7E3DA] inline-block">
+                          {batch.itemCount} {batch.itemCount === 1 ? "Item" : "Items"}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-[#1C1917] text-sm">
                         {batch.grossWeight.toFixed(3)}
@@ -181,7 +182,7 @@ export default function DispatchTable({ onOpenAddModal }) {
                           <button
                             onClick={() => setListAccessBatchId(batch.id)}
                             className="px-2.5 py-1 rounded bg-[#292524] text-white text-xs font-semibold hover:bg-[#1C1917] flex items-center gap-1 transition-colors shadow-xs"
-                            title="View sub-items list"
+                            title="View sub-items breakdown"
                           >
                             <QueueListIcon className="w-3.5 h-3.5" />
                             <span>List Access</span>
@@ -194,7 +195,7 @@ export default function DispatchTable({ onOpenAddModal }) {
                               setIsEditModalOpen(true);
                             }}
                             className="p-1.5 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
-                            title="Edit Batch"
+                            title="Edit Dispatch"
                           >
                             <PencilSquareIcon className="w-4 h-4" />
                           </button>
@@ -214,7 +215,7 @@ export default function DispatchTable({ onOpenAddModal }) {
                               setIsSinglePrintModalOpen(true);
                             }}
                             className="p-1.5 rounded text-stone-600 hover:text-[#15803D] hover:bg-[#FAF8F5]"
-                            title="Print Tag"
+                            title="Print Summary Tag"
                           >
                             <PrinterIcon className="w-4 h-4" />
                           </button>
@@ -223,7 +224,7 @@ export default function DispatchTable({ onOpenAddModal }) {
                           <button
                             onClick={() => deleteBatch(batch.id)}
                             className="p-1.5 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
-                            title="Delete Batch Directly"
+                            title="Delete Dispatch"
                           >
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -238,10 +239,10 @@ export default function DispatchTable({ onOpenAddModal }) {
                     <div className="max-w-xs mx-auto flex flex-col items-center gap-2">
                       <InboxIcon className="w-8 h-8 text-stone-400" />
                       <h3 className="text-base font-bold text-[#1C1917]">
-                        No Ornaments Found
+                        No Dispatches Found
                       </h3>
                       <p className="text-xs text-[#78716C]">
-                        Click + Add Item to create new ornament batches.
+                        Click + Add Item to create new dispatch entries.
                       </p>
                     </div>
                   </td>
@@ -251,7 +252,7 @@ export default function DispatchTable({ onOpenAddModal }) {
           </table>
         )}
 
-        {/* VIEW 2: SALESPERSON FULL ITEMIZED TABLE */}
+        {/* VIEW 2: SALESPERSON FULL ITEMIZED TABLE (Unchanged Individual Ornament Rows) */}
         {isSalesperson && (
           <table className="w-full text-left border-collapse min-w-[850px] text-xs">
             <thead className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">

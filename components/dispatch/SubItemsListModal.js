@@ -71,115 +71,130 @@ export default function SubItemsListModal({
           <div className="flex items-center gap-2">
             <ListBulletIcon className="w-5 h-5 text-[#292524]" />
             <span>
-              Batch List Access — {parentBatch.batchNo} ({parentBatch.items.length} Items)
+              Dispatch Breakdown — {parentBatch.batchNo} ({parentBatch.items.length} Items)
             </span>
           </div>
 
-          {/* PRINT BUTTON FOR ADMIN & MANAGER */}
           <Button
             variant="outline"
             size="sm"
             icon={PrinterIcon}
             onClick={handlePrintBatchList}
           >
-            Print List
+            Print Breakdown
           </Button>
         </div>
       }
-      subtitle="Detailed sub-items table. Tick checkbox after verifying weight on physical scales."
-      maxWidth="max-w-4xl"
+      subtitle="Detailed ornament-level Breakdown Table for Admin and Manager inspection."
+      maxWidth="max-w-5xl"
     >
       <div className="space-y-4">
         
-        {/* Table View of Sub-Items with Verification Checkboxes */}
-        <div className="border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[380px] overflow-y-auto">
+        {/* Table View of Sub-Items with Full Detail Columns */}
+        <div className="border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[420px] overflow-y-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917] sticky top-0">
               <tr>
-                <th className="p-3 font-bold text-center">Verify Wt</th>
+                <th className="p-3 font-bold text-center">Verify</th>
                 <th className="p-3 font-bold">#</th>
                 <th className="p-3 font-bold">Item No</th>
-                <th className="p-3 font-bold">Ornament Name</th>
+                <th className="p-3 font-bold">Assigned Staff</th>
                 <th className="p-3 font-bold text-right">Gross Wt</th>
-                <th className="p-3 font-bold text-right">Stone Wt</th>
+                <th className="p-3 font-bold text-right">Total Stone</th>
+                <th className="p-3 font-bold text-right">AD Wt</th>
                 <th className="p-3 font-bold text-right">Pearl Wt</th>
                 <th className="p-3 font-bold text-right">Net Wt</th>
+                <th className="p-3 font-bold text-center">Status</th>
                 <th className="p-3 font-bold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E3DA]">
               {parentBatch.items.length > 0 ? (
-                parentBatch.items.map((item, idx) => (
-                  <tr
-                    key={item.id}
-                    className={`transition-colors ${
-                      item.isVerified ? "bg-[#15803D]/5" : "hover:bg-[#FAF8F5]"
-                    }`}
-                  >
-                    {/* Verification Checkbox */}
-                    <td className="p-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(item.isVerified)}
-                        onChange={() => toggleItemVerification(parentBatch.id, item.id)}
-                        className="w-4 h-4 text-[#15803D] rounded border-[#E7E3DA] focus:ring-[#15803D] cursor-pointer"
-                        title="Tick after verifying weight on physical scale"
-                      />
-                    </td>
-                    <td className="p-3 font-bold text-stone-500">{idx + 1}</td>
-                    <td className="p-3 font-extrabold text-[#1C1917]">
-                      {item.itemNo}
-                    </td>
-                    <td className="p-3 font-semibold text-[#1C1917]">
-                      <span className={item.isVerified ? "line-through text-stone-500" : ""}>
-                        {item.name}
-                      </span>
-                      {item.isVerified && (
-                        <span className="ml-2 text-[10px] font-bold text-[#15803D] bg-[#15803D]/10 px-1.5 py-0.5 rounded">
-                          VERIFIED
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-right font-bold">
-                      {item.grossWeight.toFixed(3)}g
-                    </td>
-                    <td className="p-3 text-right font-medium text-amber-800">
-                      {item.stoneWeight.toFixed(3)}g
-                    </td>
-                    <td className="p-3 text-right font-medium text-sky-800">
-                      {item.pearlWeight.toFixed(3)}g
-                    </td>
-                    <td className="p-3 text-right font-extrabold text-[#1C1917] bg-[#F5F2EC]">
-                      {item.netWeight.toFixed(3)}g
-                    </td>
-                    <td className="p-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {(isAdmin || isManager) && (
-                          <button
-                            onClick={() => handleStartEdit(item)}
-                            className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
-                            title="Edit Sub-Item"
-                          >
-                            <PencilSquareIcon className="w-4 h-4" />
-                          </button>
+                parentBatch.items.map((item, idx) => {
+                  const adWeight = Math.max(0, (item.stoneWeight || 0) - (item.pearlWeight || 0));
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        item.isVerified ? "bg-[#15803D]/5" : "hover:bg-[#FAF8F5]"
+                      }`}
+                    >
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.isVerified)}
+                          onChange={() => toggleItemVerification(parentBatch.id, item.id)}
+                          className="w-4 h-4 text-[#15803D] rounded border-[#E7E3DA] focus:ring-[#15803D] cursor-pointer"
+                        />
+                      </td>
+                      <td className="p-3 font-bold text-stone-500">{idx + 1}</td>
+                      <td className="p-3 font-extrabold text-[#1C1917]">
+                        {item.itemNo}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
+                          {item.assignedSalespeople?.map((sp) => (
+                            <Badge key={sp} variant="stone" size="sm">
+                              {sp}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-bold text-[#1C1917]">
+                        {item.grossWeight.toFixed(3)}g
+                      </td>
+                      <td className="p-3 text-right font-medium text-amber-800">
+                        {item.stoneWeight.toFixed(3)}g
+                      </td>
+                      <td className="p-3 text-right font-semibold text-[#B8860B]">
+                        {adWeight.toFixed(3)}g
+                      </td>
+                      <td className="p-3 text-right font-medium text-sky-800">
+                        {item.pearlWeight.toFixed(3)}g
+                      </td>
+                      <td className="p-3 text-right font-extrabold text-[#1C1917] bg-[#F5F2EC]">
+                        {item.netWeight.toFixed(3)}g
+                      </td>
+                      <td className="p-3 text-center">
+                        {item.isVerified ? (
+                          <span className="text-[10px] font-bold text-[#15803D] bg-[#15803D]/10 px-2 py-0.5 rounded">
+                            VERIFIED
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-[#78716C] bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#E7E3DA]">
+                            ACTIVE
+                          </span>
                         )}
-                        {(isAdmin || isManager) && (
-                          <button
-                            onClick={() => deleteSubItem(parentBatch.id, item.id)}
-                            className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
-                            title="Delete Sub-Item directly"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {(isAdmin || isManager) && (
+                            <button
+                              onClick={() => handleStartEdit(item)}
+                              className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
+                              title="Edit Ornament"
+                            >
+                              <PencilSquareIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                          {(isAdmin || isManager) && (
+                            <button
+                              onClick={() => deleteSubItem(parentBatch.id, item.id)}
+                              className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
+                              title="Delete Ornament directly"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-stone-500">
-                    No items in this batch.
+                  <td colSpan={11} className="p-6 text-center text-stone-500">
+                    No ornaments in this dispatch.
                   </td>
                 </tr>
               )}
@@ -187,11 +202,11 @@ export default function SubItemsListModal({
           </table>
         </div>
 
-        {/* Edit Sub-Item Modal Drawer */}
+        {/* Edit Sub-Item Drawer */}
         {editingSubItem && (
           <form onSubmit={handleSaveSubItem} className="p-4 bg-[#FAF8F5] border border-[#E7E3DA] rounded-xl space-y-3">
             <div className="text-xs font-bold text-[#1C1917] uppercase">
-              Editing Sub-Item {editingSubItem.itemNo}
+              Editing Ornament {editingSubItem.itemNo}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Input
@@ -201,7 +216,7 @@ export default function SubItemsListModal({
                 required
               />
               <Input
-                label="Ornament Name"
+                label="Ornament Description"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 required
@@ -217,7 +232,7 @@ export default function SubItemsListModal({
                 required
               />
               <Input
-                label="Stone Wt"
+                label="Total Stone Wt"
                 type="number"
                 step="0.001"
                 value={editStone}
@@ -238,7 +253,7 @@ export default function SubItemsListModal({
                   Cancel
                 </Button>
                 <Button variant="primary" size="sm" type="submit">
-                  Save Sub-Item
+                  Save Ornament
                 </Button>
               </div>
             </div>
@@ -253,11 +268,11 @@ export default function SubItemsListModal({
             icon={PrinterIcon}
             onClick={handlePrintBatchList}
           >
-            Print List
+            Print Breakdown
           </Button>
 
           <Button variant="outline" size="sm" onClick={onClose}>
-            Close List Access
+            Close Breakdown
           </Button>
         </div>
 
