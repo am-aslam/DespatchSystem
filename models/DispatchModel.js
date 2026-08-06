@@ -46,6 +46,30 @@ export class DispatchModel {
     return this.findDispatchById(dispatchId);
   }
 
+  // Find a specific ornament item by ID
+  static findById(id) {
+    const stmt = db.prepare(`
+      SELECT di.*, d.dispatch_no
+      FROM dispatch_items di
+      JOIN dispatches d ON di.dispatch_id = d.id
+      WHERE di.id = ?
+    `);
+    const item = stmt.get(id);
+    if (!item) return null;
+
+    const assignStmt = db.prepare(`
+      SELECT u.id, u.employee_id, u.full_name as name, u.email
+      FROM users u
+      JOIN assignments a ON u.id = a.user_id
+      WHERE a.dispatch_id = ?
+    `);
+
+    return {
+      ...item,
+      assigned_users: assignStmt.all(item.dispatch_id),
+    };
+  }
+
   static findDispatchById(id) {
     const stmt = db.prepare(`
       SELECT d.*, u.full_name as creator_name
@@ -244,6 +268,10 @@ export class DispatchModel {
     return {
       items: enrichedItems,
     };
+  }
+
+  static delete(id) {
+    return this.deleteItem(id);
   }
 
   static deleteDispatch(dispatchId) {
