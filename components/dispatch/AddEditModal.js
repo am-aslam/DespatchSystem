@@ -213,16 +213,20 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
     }
 
     let finalBatch = [...draftItems];
-    if (gross > 0 && draftItems.length === 0) {
-      const itemNo = `${dispatchNo}-1`;
+
+    // Auto-include active weight entry if gross > 0
+    if (gross > 0) {
+      const nextNum = finalBatch.length + 1;
+      const itemNo = `${dispatchNo}-${nextNum}`;
       finalBatch.push({
-        id: `draft-${Date.now()}-1`,
+        id: `draft-${Date.now()}-${nextNum}`,
         itemNo,
         name: categoryName,
         grossWeight: gross,
         stoneWeight: stone,
         pearlWeight: pearl,
         netWeight: currentNetWeight,
+        isVerified: false,
       });
     }
 
@@ -260,7 +264,7 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
               </span>
             </div>
             <div className="text-xs font-bold text-[#1C1917]">
-              Ornaments Count: <span className="text-[#B8860B] font-extrabold">{draftItems.length} Added</span>
+              Ornaments Count: <span className="text-[#B8860B] font-extrabold">{draftItems.length + (gross > 0 ? 1 : 0)} Items</span>
             </div>
           </div>
 
@@ -456,7 +460,7 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
             onClick={handleFinalSubmit}
             className="font-extrabold"
           >
-            Finish & Save Dispatch ({draftItems.length > 0 ? draftItems.length : 1} Ornaments)
+            Finish & Save Dispatch ({draftItems.length + (gross > 0 ? 1 : 0)} Ornaments)
           </Button>
         </div>
 
