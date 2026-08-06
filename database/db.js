@@ -7,27 +7,32 @@ const db = new Database(dbPath);
 
 // Enable WAL mode for high concurrency performance
 db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
 
 // Initialize Database Schema
 export function initDB() {
-  // Drop legacy users table if schema differs or alter safely
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users_v2 (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      employee_id TEXT UNIQUE NOT NULL,
-      full_name TEXT NOT NULL,
-      email TEXT UNIQUE,
-      password_hash TEXT,
-      role TEXT CHECK(role IN ('ADMIN', 'MANAGER', 'SALESPERSON')) NOT NULL,
-      status TEXT CHECK(status IN ('ACTIVE', 'INACTIVE')) NOT NULL DEFAULT 'ACTIVE',
-      first_login INTEGER NOT NULL DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  // Disable foreign keys during migration checks
+  db.pragma("foreign_keys = OFF");
 
-  // Alias table to users
+  // Check if users table exists and contains employee_id column
+  const usersExists = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    .get();
+
+  if (usersExists) {
+    const columns = db.prepare("PRAGMA table_info(users)").all();
+    const hasEmpId = columns.some((c) => c.name === "employee_id");
+    if (!hasEmpId) {
+      db.exec("DROP TABLE IF EXISTS assignments");
+      db.exec("DROP TABLE IF EXISTS dispatch_items");
+      db.exec("DROP TABLE IF EXISTS sales_history");
+      db.exec("DROP TABLE IF EXISTS drop_history");
+      db.exec("DROP TABLE IF EXISTS trash");
+      db.exec("DROP TABLE IF EXISTS activity_logs");
+      db.exec("DROP TABLE IF EXISTS users");
+    }
+  }
+
+  // 1. Users Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,30 +48,8 @@ export function initDB() {
     );
   `);
 
-  // Migration: Ensure employee_id column exists if older table was present
-  try {
-    const tableInfo = db.prepare("PRAGMA table_info(users)").all();
-    const hasEmployeeId = tableInfo.some((col) => col.name === "employee_id");
-    if (!hasEmployeeId) {
-      db.exec("DROP TABLE users");
-      db.exec(`
-        CREATE TABLE users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          employee_id TEXT UNIQUE NOT NULL,
-          full_name TEXT NOT NULL,
-          email TEXT UNIQUE,
-          password_hash TEXT,
-          role TEXT CHECK(role IN ('ADMIN', 'MANAGER', 'SALESPERSON')) NOT NULL,
-          status TEXT CHECK(status IN ('ACTIVE', 'INACTIVE')) NOT NULL DEFAULT 'ACTIVE',
-          first_login INTEGER NOT NULL DEFAULT 1,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-    }
-  } catch (err) {
-    console.error("Migration error check on users table:", err);
-  }
+  // Re-enable foreign keys
+  db.pragma("foreign_keys = ON");
 
   // 2. DispatchItems Table
   db.exec(`
@@ -161,7 +144,7 @@ export function initDB() {
   seedDefaultUsers();
 }
 
-// Seed Permanent Employee ID Accounts (INSERT OR IGNORE to handle multi-worker processes)
+// Seed Permanent Employee ID Accounts
 function seedDefaultUsers() {
   const adminPassword = bcrypt.hashSync("admin123", 10);
   const managerPassword = bcrypt.hashSync("manager123", 10);
@@ -232,22 +215,26 @@ function seedDefaultUsers() {
     },
   ];
 
+  const checkStmt = db.prepare("SELECT id FROM users WHERE employee_id = ?");
   const insertStmt = db.prepare(`
-    INSERT OR IGNORE INTO users (employee_id, full_name, email, password_hash, role, status, first_login)
+    INSERT INTO users (employee_id, full_name, email, password_hash, role, status, first_login)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   const seedTransaction = db.transaction(() => {
     for (const u of defaultUsers) {
-      insertStmt.run(
-        u.employee_id,
-        u.full_name,
-        u.email,
-        u.password_hash,
-        u.role,
-        u.status,
-        u.first_login
-      );
+      const existing = checkStmt.get(u.employee_id);
+      if (!existing) {
+        insertStmt.run(
+          u.employee_id,
+          u.full_name,
+          u.email,
+          u.password_hash,
+          u.role,
+          u.status,
+          u.first_login
+        );
+      }
     }
   });
 
