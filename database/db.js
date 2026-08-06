@@ -132,6 +132,7 @@ export function initDB() {
         stone_weight REAL NOT NULL DEFAULT 0.0,
         pearl_weight REAL NOT NULL DEFAULT 0.0,
         net_weight REAL NOT NULL,
+        remarks TEXT NOT NULL DEFAULT '',
         sale_date DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (salesperson_id) REFERENCES users(id) ON DELETE CASCADE
       );
@@ -147,6 +148,7 @@ export function initDB() {
         stone_weight REAL NOT NULL DEFAULT 0.0,
         pearl_weight REAL NOT NULL DEFAULT 0.0,
         net_weight REAL NOT NULL,
+        remarks TEXT NOT NULL DEFAULT '',
         drop_date DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (salesperson_id) REFERENCES users(id) ON DELETE CASCADE
       );
@@ -164,6 +166,7 @@ export function initDB() {
         stone_weight REAL NOT NULL DEFAULT 0.0,
         pearl_weight REAL NOT NULL DEFAULT 0.0,
         net_weight REAL NOT NULL,
+        remarks TEXT NOT NULL DEFAULT '',
         status TEXT CHECK(status IN ('SOLD', 'DROP')) NOT NULL,
         deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         expires_at DATETIME NOT NULL,
