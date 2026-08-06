@@ -46,12 +46,12 @@ export function DispatchProvider({ children }) {
         const payload = dispatchesRes.data.data;
 
         if (payload?.isGrouped) {
-          // SQL Grouped Data from Backend (One Object Per Dispatch)
+          // SQL Grouped Data from Backend (One Object Per Dispatch Lot)
           const rawGroups = payload.items || [];
           setBatches(
             rawGroups.map((g) => ({
-              id: g.batch_no,
-              batchNo: g.batch_no,
+              id: g.dispatch_no || g.id,
+              batchNo: g.dispatch_no || g.batch_no,
               name: "Gold Ornaments Lot",
               assignedSalespeople: g.assigned_users?.map((u) => u.name) || [],
               assignedStaffNames: g.assigned_staff_names || "Unassigned",
@@ -165,44 +165,38 @@ export function DispatchProvider({ children }) {
     );
   };
 
-  // Add Batch with API Persistence
-  const addBatch = async (newItemsList, assignedPeople, batchName = "Gold Ornaments Lot") => {
+  // Create a single Dispatch Lot containing multiple ornaments (Single API Request)
+  const addBatch = async (newItemsList, assignedPeople, batchNo) => {
     try {
-      for (const item of newItemsList) {
-        const g = parseFloat(item.grossWeight) || 0;
-        const s = parseFloat(item.stoneWeight) || 0;
-        const p = parseFloat(item.pearlWeight) || 0;
+      const dispatchNumber = batchNo || `GLD-${Math.floor(1000 + Math.random() * 9000)}`;
 
-        await axios.post("/api/dispatches", {
-          item_number: item.itemNo,
-          gross_weight: g,
-          stone_weight: s,
-          pearl_weight: p,
-          assigned_user_ids: [currentUser.id],
-        });
-      }
+      await axios.post("/api/dispatches", {
+        dispatch_no: dispatchNumber,
+        assigned_salespeople: assignedPeople,
+        items: newItemsList,
+      });
 
-      showToast(`Added ${newItemsList.length} ornament(s) to active sheet!`, "success");
+      showToast(`Created dispatch ${dispatchNumber} with ${newItemsList.length} ornament(s)!`, "success");
       fetchAllData();
     } catch (err) {
-      showToast(err.response?.data?.message || "Failed to add batch", "danger");
+      showToast(err.response?.data?.message || "Failed to create dispatch lot", "danger");
     }
   };
 
   const addItem = (data) => {
-    addBatch([data], data.assignedSalespeople || ["SIJI CMS"], data.name || "Gold Ornament");
+    addBatch([data], data.assignedSalespeople || ["SIJI CMS"], data.batchNo || "GLD-1001");
   };
 
   // Direct Delete Batch (Admin / Manager)
   const deleteBatch = async (batchId) => {
     try {
       await axios.delete(`/api/dispatches/${encodeURIComponent(batchId)}`);
-      setBatches((prev) => prev.filter((b) => b.id !== batchId));
+      setBatches((prev) => prev.filter((b) => b.id !== batchId && b.batchNo !== batchId));
       setSelectedBatchIds((prev) => prev.filter((id) => id !== batchId));
-      showToast("Moved batch to trash", "success");
+      showToast("Moved dispatch lot to trash", "success");
       fetchAllData();
     } catch (err) {
-      showToast(err.response?.data?.message || "Failed to delete item", "danger");
+      showToast(err.response?.data?.message || "Failed to delete dispatch lot", "danger");
     }
   };
 
