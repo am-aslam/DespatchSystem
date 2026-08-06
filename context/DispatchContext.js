@@ -99,7 +99,7 @@ export function DispatchProvider({ children }) {
             netWeight: s.net_weight,
             soldBy: s.salesperson_name || "Sales Executive",
             soldDate: s.sale_date,
-            remarks: s.remarks || "Sold item",
+            remarks: s.remarks || "",
             isVerified: true,
           }))
         );
@@ -131,8 +131,13 @@ export function DispatchProvider({ children }) {
     }
   }, [currentUser, searchQuery, dateFilter]);
 
+  // Initial fetch + 30-second polling for cross-window live sync
   useEffect(() => {
     fetchAllData();
+    const interval = setInterval(() => {
+      fetchAllData();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [fetchAllData]);
 
   // Fetch ornament-level items for List Access Modal via API
@@ -322,7 +327,8 @@ export function DispatchProvider({ children }) {
   const value = {
     batches: filteredBatches,
     items: allItemizedOrnaments,
-    allItemizedOrnaments,
+    // Sort salesperson ornaments by net weight ascending (small → big)
+    allItemizedOrnaments: [...allItemizedOrnaments].sort((a, b) => (a.netWeight || 0) - (b.netWeight || 0)),
     salesHistory,
     trash,
     totals,

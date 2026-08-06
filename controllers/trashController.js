@@ -25,19 +25,22 @@ export class TrashController {
         return errorResponse("Trash item not found.", 404);
       }
 
-      // Restore dispatch item back to active table
+      // Restore dispatch item back to active table using createBatch
       const randNo = Math.floor(1000 + Math.random() * 9000);
-      const restoredDispatch = DispatchModel.create({
-        item_number: item.item_number || `GLD-${randNo}`,
-        gross_weight: item.gross_weight,
-        stone_weight: item.stone_weight,
-        pearl_weight: item.pearl_weight,
-        net_weight: item.net_weight,
+      const restoredDispatch = DispatchModel.createBatch({
+        dispatch_no: item.item_number || `GLD-${randNo}`,
         created_by: user.id,
+        assigned_user_ids: [item.salesperson_id || user.id],
+        items: [
+          {
+            itemNo: item.item_number || `GLD-${randNo}`,
+            grossWeight: item.gross_weight,
+            stoneWeight: item.stone_weight,
+            pearlWeight: item.pearl_weight,
+            netWeight: item.net_weight,
+          },
+        ],
       });
-
-      // Assign to user who restored it
-      AssignmentModel.assignUsersToDispatch(restoredDispatch.id, [item.salesperson_id || user.id]);
 
       // Remove from trash
       TrashModel.delete(id);
