@@ -20,6 +20,11 @@
 # production
 /build
 
+# sqlite database files
+gold_sales.db*
+*.db
+*.sqlite
+
 # misc
 .DS_Store
 *.pem

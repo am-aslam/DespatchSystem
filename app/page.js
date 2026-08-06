@@ -1,69 +1,143 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from "react";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { DispatchProvider, useDispatch } from "@/context/DispatchContext";
+import LoginForm from "@/components/auth/LoginForm";
+import TopBar from "@/components/layout/TopBar";
+import Sidebar from "@/components/layout/Sidebar";
+import DispatchTable from "@/components/dispatch/DispatchTable";
+import AddEditModal from "@/components/dispatch/AddEditModal";
+import PrintableDispatchSheet from "@/components/print/PrintableDispatchSheet";
+import SalesHistoryView from "@/components/sales/SalesHistoryView";
+import TrashView from "@/components/trash/TrashView";
+import UserManagementView from "@/components/users/UserManagementView";
+import ActivityLogsView from "@/components/logs/ActivityLogsView";
+import UserProfileView from "@/components/users/UserProfileView";
+import SettingsView from "@/components/settings/SettingsView";
+import Toast from "@/components/ui/Toast";
+
+function AppContent() {
+  const { currentUser, isInitialized, isAdmin, isManager, isSalesperson } = useAuth();
+  const { toast, closeToast } = useDispatch();
+
+  const [currentTab, setCurrentTab] = useState("dispatch");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 rounded-lg bg-[#292524] text-white flex items-center justify-center font-bold text-xl animate-pulse mx-auto">
+            AJ
+          </div>
+          <div className="text-xs font-bold text-[#1C1917]">
+            Loading Aurum Gold System...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show Login page if not authenticated
+  if (!currentUser) {
+    return <LoginForm />;
+  }
+
+  // Role Guard Helper
+  const canAccessTab = (tab) => {
+    if (tab === "dispatch" || tab === "sales" || tab === "trash" || tab === "profile") {
+      return true;
+    }
+    if (tab === "users" || tab === "settings") {
+      return isAdmin;
+    }
+    if (tab === "logs") {
+      return isAdmin || isManager;
+    }
+    return false;
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1917]">
+      
+      {/* Top Bar Navigation */}
+      <TopBar
+        onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenPrintModal={() => setIsPrintModalOpen(true)}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+      />
+
+      {/* Main App Layout */}
+      <div className="flex flex-1 min-h-0 relative">
+        
+        {/* Navigation Sidebar */}
+        <Sidebar
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.js
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {/* Main Content Area */}
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 overflow-y-auto flex flex-col min-w-0">
+          {!canAccessTab(currentTab) ? (
+            <div className="p-8 text-center text-[#DC2626] bg-white border border-[#E7E3DA] rounded-xl font-bold text-sm">
+              403 Unauthorized: Access to this page is restricted for your role ({currentUser.role}).
+            </div>
+          ) : (
+            <>
+              {currentTab === "dispatch" && (
+                <DispatchTable onOpenAddModal={() => setIsAddModalOpen(true)} />
+              )}
+
+              {currentTab === "sales" && (
+                <SalesHistoryView onOpenPrintModal={() => setIsPrintModalOpen(true)} />
+              )}
+
+              {currentTab === "trash" && <TrashView />}
+
+              {currentTab === "users" && <UserManagementView />}
+
+              {currentTab === "logs" && <ActivityLogsView />}
+
+              {currentTab === "profile" && <UserProfileView />}
+
+              {currentTab === "settings" && <SettingsView />}
+            </>
+          )}
+        </main>
+
+      </div>
+
+      {/* Global Modals */}
+      <AddEditModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        editItem={null}
+      />
+
+      <PrintableDispatchSheet
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
+
+      {/* Global Toast */}
+      <Toast toast={toast} onClose={closeToast} />
+
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <AuthProvider>
+      <DispatchProvider>
+        <AppContent />
+      </DispatchProvider>
+    </AuthProvider>
   );
 }

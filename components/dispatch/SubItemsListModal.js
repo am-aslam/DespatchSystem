@@ -1,0 +1,267 @@
+"use client";
+
+import React, { useState } from "react";
+import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
+import Input from "@/components/ui/Input";
+import { useDispatch } from "@/context/DispatchContext";
+import { useAuth } from "@/context/AuthContext";
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  ListBulletIcon,
+  PrinterIcon,
+} from "@heroicons/react/24/outline";
+
+export default function SubItemsListModal({
+  isOpen,
+  onClose,
+  parentBatch,
+}) {
+  const { deleteSubItem, updateSubItem, toggleItemVerification, calculateNetWeight } =
+    useDispatch();
+  const { isAdmin, isManager } = useAuth();
+
+  // Sub-item editing state
+  const [editingSubItem, setEditingSubItem] = useState(null);
+  const [editItemNo, setEditItemNo] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editGross, setEditGross] = useState("");
+  const [editStone, setEditStone] = useState("0");
+  const [editPearl, setEditPearl] = useState("0");
+
+  if (!parentBatch) return null;
+
+  const handleStartEdit = (item) => {
+    setEditingSubItem(item);
+    setEditItemNo(item.itemNo);
+    setEditName(item.name);
+    setEditGross(item.grossWeight.toString());
+    setEditStone(item.stoneWeight.toString());
+    setEditPearl(item.pearlWeight.toString());
+  };
+
+  const handleSaveSubItem = (e) => {
+    e.preventDefault();
+    if (!editingSubItem) return;
+
+    updateSubItem(parentBatch.id, editingSubItem.id, {
+      itemNo: editItemNo,
+      name: editName,
+      grossWeight: editGross,
+      stoneWeight: editStone,
+      pearlWeight: editPearl,
+    });
+    setEditingSubItem(null);
+  };
+
+  const handlePrintBatchList = () => {
+    window.print();
+  };
+
+  const computedNet = calculateNetWeight(editGross, editStone);
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div className="flex items-center justify-between w-full pr-6">
+          <div className="flex items-center gap-2">
+            <ListBulletIcon className="w-5 h-5 text-[#292524]" />
+            <span>
+              Batch List Access — {parentBatch.batchNo} ({parentBatch.items.length} Items)
+            </span>
+          </div>
+
+          {/* PRINT BUTTON FOR ADMIN & MANAGER */}
+          <Button
+            variant="outline"
+            size="sm"
+            icon={PrinterIcon}
+            onClick={handlePrintBatchList}
+          >
+            Print List
+          </Button>
+        </div>
+      }
+      subtitle="Detailed sub-items table. Tick checkbox after verifying weight on physical scales."
+      maxWidth="max-w-4xl"
+    >
+      <div className="space-y-4">
+        
+        {/* Table View of Sub-Items with Verification Checkboxes */}
+        <div className="border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[380px] overflow-y-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917] sticky top-0">
+              <tr>
+                <th className="p-3 font-bold text-center">Verify Wt</th>
+                <th className="p-3 font-bold">#</th>
+                <th className="p-3 font-bold">Item No</th>
+                <th className="p-3 font-bold">Ornament Name</th>
+                <th className="p-3 font-bold text-right">Gross Wt</th>
+                <th className="p-3 font-bold text-right">Stone Wt</th>
+                <th className="p-3 font-bold text-right">Pearl Wt</th>
+                <th className="p-3 font-bold text-right">Net Wt</th>
+                <th className="p-3 font-bold text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E7E3DA]">
+              {parentBatch.items.length > 0 ? (
+                parentBatch.items.map((item, idx) => (
+                  <tr
+                    key={item.id}
+                    className={`transition-colors ${
+                      item.isVerified ? "bg-[#15803D]/5" : "hover:bg-[#FAF8F5]"
+                    }`}
+                  >
+                    {/* Verification Checkbox */}
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(item.isVerified)}
+                        onChange={() => toggleItemVerification(parentBatch.id, item.id)}
+                        className="w-4 h-4 text-[#15803D] rounded border-[#E7E3DA] focus:ring-[#15803D] cursor-pointer"
+                        title="Tick after verifying weight on physical scale"
+                      />
+                    </td>
+                    <td className="p-3 font-bold text-stone-500">{idx + 1}</td>
+                    <td className="p-3 font-extrabold text-[#1C1917]">
+                      {item.itemNo}
+                    </td>
+                    <td className="p-3 font-semibold text-[#1C1917]">
+                      <span className={item.isVerified ? "line-through text-stone-500" : ""}>
+                        {item.name}
+                      </span>
+                      {item.isVerified && (
+                        <span className="ml-2 text-[10px] font-bold text-[#15803D] bg-[#15803D]/10 px-1.5 py-0.5 rounded">
+                          VERIFIED
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right font-bold">
+                      {item.grossWeight.toFixed(3)}g
+                    </td>
+                    <td className="p-3 text-right font-medium text-amber-800">
+                      {item.stoneWeight.toFixed(3)}g
+                    </td>
+                    <td className="p-3 text-right font-medium text-sky-800">
+                      {item.pearlWeight.toFixed(3)}g
+                    </td>
+                    <td className="p-3 text-right font-extrabold text-[#1C1917] bg-[#F5F2EC]">
+                      {item.netWeight.toFixed(3)}g
+                    </td>
+                    <td className="p-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {(isAdmin || isManager) && (
+                          <button
+                            onClick={() => handleStartEdit(item)}
+                            className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
+                            title="Edit Sub-Item"
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                        {(isAdmin || isManager) && (
+                          <button
+                            onClick={() => deleteSubItem(parentBatch.id, item.id)}
+                            className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
+                            title="Delete Sub-Item directly"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={9} className="p-6 text-center text-stone-500">
+                    No items in this batch.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Edit Sub-Item Modal Drawer */}
+        {editingSubItem && (
+          <form onSubmit={handleSaveSubItem} className="p-4 bg-[#FAF8F5] border border-[#E7E3DA] rounded-xl space-y-3">
+            <div className="text-xs font-bold text-[#1C1917] uppercase">
+              Editing Sub-Item {editingSubItem.itemNo}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Item No"
+                value={editItemNo}
+                onChange={(e) => setEditItemNo(e.target.value)}
+                required
+              />
+              <Input
+                label="Ornament Name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Input
+                label="Gross Wt"
+                type="number"
+                step="0.001"
+                value={editGross}
+                onChange={(e) => setEditGross(e.target.value)}
+                required
+              />
+              <Input
+                label="Stone Wt"
+                type="number"
+                step="0.001"
+                value={editStone}
+                onChange={(e) => setEditStone(e.target.value)}
+              />
+              <Input
+                label="Pearl Wt"
+                type="number"
+                step="0.001"
+                value={editPearl}
+                onChange={(e) => setEditPearl(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="font-bold">Calculated Net Wt: {computedNet.toFixed(3)}g</span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditingSubItem(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" type="submit">
+                  Save Sub-Item
+                </Button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* Modal Actions */}
+        <div className="flex justify-between items-center pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={PrinterIcon}
+            onClick={handlePrintBatchList}
+          >
+            Print List
+          </Button>
+
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close List Access
+          </Button>
+        </div>
+
+      </div>
+    </Modal>
+  );
+}
