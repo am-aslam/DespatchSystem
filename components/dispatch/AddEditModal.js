@@ -33,7 +33,38 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
   const [draftItems, setDraftItems] = useState([]);
   const [editingDraftIndex, setEditingDraftIndex] = useState(null);
 
+  // Input Field References for Keyboard Navigation (Arrow keys & Enter)
   const grossInputRef = useRef(null);
+  const stoneInputRef = useRef(null);
+  const pearlInputRef = useRef(null);
+
+  // Keyboard Navigation Handler (ArrowRight = Forward, ArrowLeft = Backward)
+  const handleKeyDown = (e, field) => {
+    if (e.key === "ArrowRight" || e.key === "Enter") {
+      if (field === "GROSS") {
+        e.preventDefault();
+        stoneInputRef.current?.focus();
+        stoneInputRef.current?.select();
+      } else if (field === "STONE") {
+        e.preventDefault();
+        pearlInputRef.current?.focus();
+        pearlInputRef.current?.select();
+      } else if (field === "PEARL" && e.key === "Enter") {
+        e.preventDefault();
+        handleAddToList(e);
+      }
+    } else if (e.key === "ArrowLeft") {
+      if (field === "STONE") {
+        e.preventDefault();
+        grossInputRef.current?.focus();
+        grossInputRef.current?.select();
+      } else if (field === "PEARL") {
+        e.preventDefault();
+        stoneInputRef.current?.focus();
+        stoneInputRef.current?.select();
+      }
+    }
+  };
 
   // Generate random dispatch number
   const generateDispatchNo = () => {
@@ -148,7 +179,10 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
     setPearlWeight("0");
 
     setTimeout(() => {
-      if (grossInputRef.current) grossInputRef.current.focus();
+      if (grossInputRef.current) {
+        grossInputRef.current.focus();
+        grossInputRef.current.select();
+      }
     }, 50);
   };
 
@@ -211,7 +245,7 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
       isOpen={isOpen}
       onClose={onClose}
       title={editItem ? `Edit Dispatch ${editItem.batchNo || editItem.itemNo}` : `Create New Dispatch ${dispatchNo}`}
-      subtitle={editItem ? "Update ornament details" : "Add multiple ornaments into this dispatch batch. One summary row will be generated."}
+      subtitle={editItem ? "Update ornament details" : "Add multiple ornaments into this dispatch batch. Use Arrow Keys ← → to navigate between weight fields."}
       maxWidth="max-w-3xl"
     >
       <div className="space-y-4">
@@ -257,10 +291,10 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
           </div>
         </div>
 
-        {/* Input Form for adding Ornaments */}
+        {/* Input Form for adding Ornaments with Keyboard Arrow Navigation */}
         <form onSubmit={handleAddToList} className="bg-white p-3.5 rounded-xl border border-[#E7E3DA] space-y-3">
           <div className="text-xs font-bold text-[#1C1917] uppercase tracking-wider flex items-center justify-between">
-            <span>Ornament Weight Entry</span>
+            <span>Ornament Weight Entry (Use ← → Arrow Keys to Move Focus)</span>
             {editingDraftIndex !== null && (
               <span className="text-amber-700 font-extrabold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                 Editing Item {draftItems[editingDraftIndex]?.itemNo}
@@ -280,6 +314,7 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
                 placeholder="0.000"
                 value={grossWeight}
                 onChange={(e) => setGrossWeight(e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, "GROSS")}
                 className="w-full bg-[#FAF8F5] text-[#1C1917] text-sm font-black px-3 py-2 rounded-lg border border-[#E7E3DA] focus:outline-none focus:border-[#292524] focus:bg-white"
               />
             </div>
@@ -289,11 +324,13 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
                 Total Stone Wt (g)
               </label>
               <input
+                ref={stoneInputRef}
                 type="number"
                 step="0.001"
                 placeholder="0.000"
                 value={stoneWeight}
                 onChange={(e) => setStoneWeight(e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, "STONE")}
                 className="w-full bg-[#FAF8F5] text-[#1C1917] text-sm font-bold px-3 py-2 rounded-lg border border-[#E7E3DA] focus:outline-none focus:border-[#292524] focus:bg-white"
               />
             </div>
@@ -303,11 +340,13 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
                 Pearl Weight (g)
               </label>
               <input
+                ref={pearlInputRef}
                 type="number"
                 step="0.001"
                 placeholder="0.000"
                 value={pearlWeight}
                 onChange={(e) => setPearlWeight(e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, "PEARL")}
                 className="w-full bg-[#FAF8F5] text-[#1C1917] text-sm font-bold px-3 py-2 rounded-lg border border-[#E7E3DA] focus:outline-none focus:border-[#292524] focus:bg-white"
               />
             </div>
