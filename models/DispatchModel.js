@@ -9,8 +9,8 @@ export class DispatchModel {
     `);
 
     const insertItem = db.prepare(`
-      INSERT INTO dispatch_items (dispatch_id, item_number, gross_weight, stone_weight, pearl_weight, net_weight)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO dispatch_items (dispatch_id, item_number, gross_weight, stone_weight, pearl_weight, net_weight, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertAssign = db.prepare(`
@@ -24,7 +24,7 @@ export class DispatchModel {
       const info = insertDispatch.run(dispatch_no, created_by);
       dispatchId = info.lastInsertRowid;
 
-      // Insert all ornaments belonging to this dispatch
+      // Insert all ornaments belonging to this dispatch with created_by field
       items.forEach((item, idx) => {
         const itemNumber = item.itemNo || `${dispatch_no}-${idx + 1}`;
         const g = parseFloat(item.grossWeight || item.gross_weight || 0);
@@ -32,7 +32,7 @@ export class DispatchModel {
         const p = parseFloat(item.pearlWeight || item.pearl_weight || 0);
         const n = parseFloat(Math.max(0, g - s).toFixed(3));
 
-        insertItem.run(dispatchId, itemNumber, g, s, p, n);
+        insertItem.run(dispatchId, itemNumber, g, s, p, n, created_by);
       });
 
       // Insert Salesperson assignments

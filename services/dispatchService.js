@@ -6,7 +6,7 @@ import { TrashModel } from "@/models/TrashModel";
 import { ActivityLogModel } from "@/models/ActivityLogModel";
 
 export class DispatchService {
-  static handleDispatchDelete({ dispatch_id, status, user }) {
+  static handleDispatchDelete({ dispatch_id, status, remarks = "", user }) {
     const dispatch = DispatchModel.findById(dispatch_id);
     if (!dispatch) {
       throw new Error("Dispatch item not found.");
@@ -28,6 +28,7 @@ export class DispatchService {
           stone_weight,
           pearl_weight,
           net_weight,
+          remarks: remarks || "Sold item",
         });
 
         // 2. Insert into Trash
@@ -41,13 +42,14 @@ export class DispatchService {
           pearl_weight,
           net_weight,
           status: "SOLD",
+          remarks: remarks || "Sold item",
         });
 
         // 3. Update ActivityLogs
         ActivityLogModel.log(
           user.id,
           "Marked Sold",
-          `Salesperson ${user.name} marked item ${item_number} (${net_weight}g) as SOLD`
+          `Salesperson ${user.name || user.full_name} marked item ${item_number} (${net_weight}g) as SOLD. Note: ${remarks || "None"}`
         );
       } else if (status === "DROP") {
         // 1. Insert into DropHistory
@@ -58,6 +60,7 @@ export class DispatchService {
           stone_weight,
           pearl_weight,
           net_weight,
+          remarks: remarks || "Dropped item",
         });
 
         // 2. Insert into Trash
@@ -71,20 +74,21 @@ export class DispatchService {
           pearl_weight,
           net_weight,
           status: "DROP",
+          remarks: remarks || "Dropped item",
         });
 
         // 3. Update ActivityLogs
         ActivityLogModel.log(
           user.id,
           "Marked Drop",
-          `Salesperson ${user.name} dropped item ${item_number} (${net_weight}g)`
+          `Salesperson ${user.name || user.full_name} dropped item ${item_number} (${net_weight}g). Note: ${remarks || "None"}`
         );
       } else {
         throw new Error("Invalid status type. Must be SOLD or DROP.");
       }
 
       // 4. Remove from active DispatchItems
-      DispatchModel.delete(dispatch_id);
+      DispatchModel.deleteItem(dispatch_id);
 
       return historyRecord;
     });

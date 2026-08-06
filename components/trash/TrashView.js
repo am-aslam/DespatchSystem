@@ -29,75 +29,79 @@ export default function TrashView() {
         </Badge>
       </div>
 
-      {/* Trash Table */}
+      {/* Trash Table (Note / Remarks replaces Date & Time column) */}
       <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs overflow-hidden">
-        <table className="w-full text-left border-collapse min-w-[750px] text-xs">
-          <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
-            <tr>
-              <th className="px-4 py-3 font-bold">Item No</th>
-              <th className="px-4 py-3 font-bold">Ornament Name</th>
-              <th className="px-4 py-3 font-bold">Delete Status</th>
-              <th className="px-4 py-3 font-bold text-right">Net Weight</th>
-              <th className="px-4 py-3 font-bold">Deleted By</th>
-              <th className="px-4 py-3 font-bold">Date & Time</th>
-              <th className="px-4 py-3 font-bold text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E7E3DA] bg-white">
-            {trash.length > 0 ? (
-              trash.map((item) => (
-                <tr key={item.id} className="hover:bg-[#FAF8F5] transition-colors">
-                  <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
-                    {item.itemNo}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-[#1C1917]">
-                    {item.name}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="danger" size="sm">
-                      {item.reason || "Deleted Item"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 font-bold text-[#1C1917] text-right">
-                    {(item.netWeight || 0).toFixed(3)} g
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-[#1C1917]">
-                    {item.deletedBy || "Admin"}
-                  </td>
-                  <td className="px-4 py-3 text-[11px] font-medium text-[#78716C]">
-                    {item.deletedDate ? new Date(item.deletedDate).toLocaleString() : "Recently"}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={ArrowPathIcon}
-                        onClick={() => restoreFromTrash(item.id)}
-                        title="Restore item back to active dispatch table"
-                      >
-                        Restore
-                      </Button>
-                      <button
-                        onClick={() => purgeFromTrash(item.id)}
-                        className="p-1.5 rounded-lg text-stone-400 hover:text-[#DC2626] hover:bg-[#DC2626]/10 transition-colors"
-                        title="Permanently remove item from trash"
-                      >
-                        <XCircleIcon className="w-5 h-5 stroke-[2]" />
-                      </button>
-                    </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[750px] text-xs">
+            <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
+              <tr>
+                <th className="px-4 py-3 font-bold">Item No</th>
+                <th className="px-4 py-3 font-bold">Ornament Name</th>
+                <th className="px-4 py-3 font-bold">Delete Status</th>
+                <th className="px-4 py-3 font-bold text-right">Net Weight</th>
+                <th className="px-4 py-3 font-bold">Deleted By</th>
+                <th className="px-4 py-3 font-bold">Note / Remarks</th>
+                <th className="px-4 py-3 font-bold text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E7E3DA] bg-white">
+              {trash.length > 0 ? (
+                trash.map((item) => (
+                  <tr key={item.id} className="hover:bg-[#FAF8F5] transition-colors">
+                    <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
+                      {item.itemNo}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-[#1C1917]">
+                      {item.name}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="danger" size="sm">
+                        {item.status || "Deleted Item"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 font-bold text-[#1C1917] text-right">
+                      {(item.netWeight || 0).toFixed(3)} g
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-[#1C1917]">
+                      {item.deletedBy || "Admin"}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-bold text-[#1C1917]">
+                      <span className="bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E7E3DA] inline-block text-stone-800">
+                        {item.remarks || item.reason || "No Note"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={ArrowPathIcon}
+                          onClick={() => restoreFromTrash(item.id)}
+                          title="Restore item back to active dispatch table"
+                        >
+                          Restore
+                        </Button>
+                        <button
+                          onClick={() => purgeFromTrash(item.id)}
+                          className="p-1.5 rounded-lg text-stone-400 hover:text-[#DC2626] hover:bg-[#DC2626]/10 transition-colors"
+                          title="Permanently remove item from trash"
+                        >
+                          <XCircleIcon className="w-5 h-5 stroke-[2]" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-[#78716C]">
+                    Trash bin is empty.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={7} className="px-6 py-10 text-center text-[#78716C]">
-                  Trash bin is empty.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>

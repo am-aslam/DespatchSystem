@@ -29,6 +29,7 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
   const [editStone, setEditStone] = useState("0");
   const [editPearl, setEditPearl] = useState("0");
   const [editSoldBy, setEditSoldBy] = useState("");
+  const [editRemarks, setEditRemarks] = useState("");
 
   // Full weight sums across all sales history
   const salesTotals = useMemo(() => {
@@ -48,7 +49,6 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
   const salesByStaff = useMemo(() => {
     const map = {};
 
-    // Initialize all salespersons
     SALESPERSONS.forEach((sp) => {
       map[sp] = {
         staffName: sp,
@@ -90,6 +90,7 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
     setEditStone(sale.stoneWeight.toString());
     setEditPearl(sale.pearlWeight.toString());
     setEditSoldBy(sale.soldBy || "Sales Executive");
+    setEditRemarks(sale.remarks || "Sold item");
   };
 
   const handleSaveSale = (e) => {
@@ -103,6 +104,7 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
       stoneWeight: editStone,
       pearlWeight: editPearl,
       soldBy: editSoldBy,
+      remarks: editRemarks,
     });
     setEditingSale(null);
   };
@@ -177,7 +179,7 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
         </div>
       </div>
 
-      {/* ADMIN & MANAGER SALESPERSON PERFORMANCE CONSOLE (Staff Name & Sum of Weights) */}
+      {/* ADMIN & MANAGER SALESPERSON PERFORMANCE CONSOLE */}
       {(isAdmin || isManager) && (
         <div className="bg-white border border-[#E7E3DA] rounded-xl p-4 shadow-xs space-y-3">
           <div className="text-xs font-bold text-[#1C1917] uppercase tracking-wider flex items-center gap-2">
@@ -228,89 +230,93 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
         </div>
       )}
 
-      {/* Itemized Sales Table */}
+      {/* Itemized Sales Table (Note / Remarks column replaces Date column) */}
       <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs overflow-hidden">
         <div className="p-3 bg-[#FAF8F5] border-b border-[#E7E3DA] font-bold text-xs text-[#1C1917]">
           Itemized Sold Ornaments Log
         </div>
-        <table className="w-full text-left border-collapse min-w-[750px] text-xs">
-          <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
-            <tr>
-              <th className="px-4 py-3 font-bold">#</th>
-              <th className="px-4 py-3 font-bold">Item No</th>
-              <th className="px-4 py-3 font-bold">Ornament Name</th>
-              <th className="px-4 py-3 font-bold text-right">Gross Wt</th>
-              <th className="px-4 py-3 font-bold text-right">Stone Wt</th>
-              <th className="px-4 py-3 font-bold text-right">Pearl Wt</th>
-              <th className="px-4 py-3 font-bold text-right">Net Weight</th>
-              <th className="px-4 py-3 font-bold">Sold By</th>
-              <th className="px-4 py-3 font-bold">Sold Date</th>
-              <th className="px-4 py-3 font-bold text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E7E3DA] bg-white">
-            {salesHistory.length > 0 ? (
-              salesHistory.map((item, idx) => (
-                <tr key={item.id} className="hover:bg-[#FAF8F5] transition-colors">
-                  <td className="px-4 py-3 font-bold text-stone-400">{idx + 1}</td>
-                  <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
-                    {item.itemNo}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-[#1C1917]">
-                    {item.name}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-[#1C1917] text-right">
-                    {item.grossWeight.toFixed(3)}g
-                  </td>
-                  <td className="px-4 py-3 font-medium text-amber-800 text-right">
-                    {item.stoneWeight.toFixed(3)}g
-                  </td>
-                  <td className="px-4 py-3 font-medium text-sky-800 text-right">
-                    {item.pearlWeight.toFixed(3)}g
-                  </td>
-                  <td className="px-4 py-3 text-right font-black text-[#15803D]">
-                    <span className="bg-[#15803D]/10 px-2 py-0.5 rounded border border-[#15803D]/20">
-                      {item.netWeight.toFixed(3)}g
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-[#1C1917]">
-                    <Badge variant="success" size="sm">
-                      {item.soldBy}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-[11px] font-medium text-[#78716C]">
-                    {new Date(item.soldDate).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => openEditModal(item)}
-                        className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
-                        title="Edit Sales Item"
-                      >
-                        <PencilSquareIcon className="w-4 h-4" />
-                      </button>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[750px] text-xs">
+            <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
+              <tr>
+                <th className="px-4 py-3 font-bold">#</th>
+                <th className="px-4 py-3 font-bold">Item No</th>
+                <th className="px-4 py-3 font-bold">Ornament Name</th>
+                <th className="px-4 py-3 font-bold text-right">Gross Wt</th>
+                <th className="px-4 py-3 font-bold text-right">Stone Wt</th>
+                <th className="px-4 py-3 font-bold text-right">Pearl Wt</th>
+                <th className="px-4 py-3 font-bold text-right">Net Weight</th>
+                <th className="px-4 py-3 font-bold">Sold By</th>
+                <th className="px-4 py-3 font-bold">Note / Remarks</th>
+                <th className="px-4 py-3 font-bold text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E7E3DA] bg-white">
+              {salesHistory.length > 0 ? (
+                salesHistory.map((item, idx) => (
+                  <tr key={item.id} className="hover:bg-[#FAF8F5] transition-colors">
+                    <td className="px-4 py-3 font-bold text-stone-400">{idx + 1}</td>
+                    <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
+                      {item.itemNo}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-[#1C1917]">
+                      {item.name}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-[#1C1917] text-right">
+                      {item.grossWeight.toFixed(3)}g
+                    </td>
+                    <td className="px-4 py-3 font-medium text-amber-800 text-right">
+                      {item.stoneWeight.toFixed(3)}g
+                    </td>
+                    <td className="px-4 py-3 font-medium text-sky-800 text-right">
+                      {item.pearlWeight.toFixed(3)}g
+                    </td>
+                    <td className="px-4 py-3 text-right font-black text-[#15803D]">
+                      <span className="bg-[#15803D]/10 px-2 py-0.5 rounded border border-[#15803D]/20">
+                        {item.netWeight.toFixed(3)}g
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-[#1C1917]">
+                      <Badge variant="success" size="sm">
+                        {item.soldBy}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-xs font-bold text-[#1C1917]">
+                      <span className="bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E7E3DA] inline-block text-stone-800">
+                        {item.remarks || "Sold item"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
+                          title="Edit Sales Item"
+                        >
+                          <PencilSquareIcon className="w-4 h-4" />
+                        </button>
 
-                      <button
-                        onClick={() => deleteSaleItem(item.id)}
-                        className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
-                        title="Delete Sale Item"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => deleteSaleItem(item.id)}
+                          className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
+                          title="Delete Sale Item"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={10} className="px-6 py-10 text-center text-[#78716C]">
+                    No sales recorded.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={10} className="px-6 py-10 text-center text-[#78716C]">
-                  No sales recorded.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Edit Sale Item Modal */}
@@ -371,6 +377,12 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
               label="Sold By"
               value={editSoldBy}
               onChange={(e) => setEditSoldBy(e.target.value)}
+            />
+
+            <Input
+              label="Note / Remarks"
+              value={editRemarks}
+              onChange={(e) => setEditRemarks(e.target.value)}
             />
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E7E3DA]">

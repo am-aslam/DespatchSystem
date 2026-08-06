@@ -11,6 +11,7 @@ export class TrashModel {
     pearl_weight,
     net_weight,
     status,
+    remarks = "",
   }) {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
@@ -18,9 +19,9 @@ export class TrashModel {
       INSERT INTO trash (
         dispatch_id, item_number, item_name, salesperson_id,
         gross_weight, stone_weight, pearl_weight, net_weight,
-        status, expires_at
+        status, remarks, expires_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
@@ -33,6 +34,7 @@ export class TrashModel {
       pearl_weight || 0,
       net_weight,
       status,
+      remarks,
       expiresAt
     );
 

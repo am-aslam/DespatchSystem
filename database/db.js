@@ -104,6 +104,22 @@ export function initDB() {
       db.exec("ALTER TABLE dispatch_items ADD COLUMN pearl_weight REAL DEFAULT 0.0;");
     } catch (e) {}
 
+    try {
+      db.exec("ALTER TABLE dispatch_items ADD COLUMN created_by INTEGER;");
+    } catch (e) {}
+
+    try {
+      db.exec("ALTER TABLE sales_history ADD COLUMN remarks TEXT DEFAULT '';");
+    } catch (e) {}
+
+    try {
+      db.exec("ALTER TABLE drop_history ADD COLUMN remarks TEXT DEFAULT '';");
+    } catch (e) {}
+
+    try {
+      db.exec("ALTER TABLE trash ADD COLUMN remarks TEXT DEFAULT '';");
+    } catch (e) {}
+
     // 5. SalesHistory Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS sales_history (

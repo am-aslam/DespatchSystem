@@ -113,11 +113,13 @@ export class DispatchController {
     try {
       const { searchParams } = new URL(req.url);
       const status = searchParams.get("status")?.toUpperCase();
+      const remarks = searchParams.get("remarks") || "";
 
       if (status === "SOLD" || status === "DROP") {
         const result = DispatchService.handleDispatchDelete({
           dispatch_id: id,
           status,
+          remarks,
           user,
         });
         return successResponse(result, `Dispatch item marked as ${status} successfully`);

@@ -84,7 +84,7 @@ export function DispatchProvider({ children }) {
         }
       }
 
-      // 2. Fetch Sales History
+      // 2. Fetch Sales History with remarks note
       const salesRes = await axios.get("/api/sales");
       if (salesRes.data?.success) {
         const rawSales = salesRes.data.data || [];
@@ -99,12 +99,13 @@ export function DispatchProvider({ children }) {
             netWeight: s.net_weight,
             soldBy: s.salesperson_name || "Sales Executive",
             soldDate: s.sale_date,
+            remarks: s.remarks || "Sold item",
             isVerified: true,
           }))
         );
       }
 
-      // 3. Fetch Trash
+      // 3. Fetch Trash with remarks note
       const trashRes = await axios.get("/api/trash");
       if (trashRes.data?.success) {
         const rawTrash = trashRes.data.data || [];
@@ -119,6 +120,7 @@ export function DispatchProvider({ children }) {
             netWeight: t.net_weight,
             status: t.status,
             reason: `${t.status} item`,
+            remarks: t.remarks || `${t.status} item`,
             deletedBy: t.salesperson_name || "Admin",
             deletedDate: t.deleted_at,
           }))
@@ -200,11 +202,13 @@ export function DispatchProvider({ children }) {
     }
   };
 
-  // Delete Salesperson Ornament (Sold vs Drop workflow)
+  // Delete Salesperson Ornament (Sold vs Drop workflow with remarks note)
   const deleteSalespersonOrnament = async (itemId, actionType = "sold", remarks = "") => {
     try {
       const statusParam = actionType === "sold" ? "SOLD" : "DROP";
-      await axios.delete(`/api/dispatches/${itemId}?status=${statusParam}`);
+      await axios.delete(
+        `/api/dispatches/${itemId}?status=${statusParam}&remarks=${encodeURIComponent(remarks)}`
+      );
 
       showToast(
         actionType === "sold"
