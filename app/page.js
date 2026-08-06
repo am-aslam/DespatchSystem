@@ -18,7 +18,7 @@ import SettingsView from "@/components/settings/SettingsView";
 import Toast from "@/components/ui/Toast";
 
 function AppContent() {
-  const { currentUser, isInitialized, isAdmin, isManager, isSalesperson } = useAuth();
+  const { currentUser, isInitialized, isAdmin, isManager } = useAuth();
   const { toast, closeToast } = useDispatch();
 
   const [currentTab, setCurrentTab] = useState("dispatch");
@@ -30,7 +30,7 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 rounded-lg bg-[#292524] text-white flex items-center justify-center font-bold text-xl animate-pulse mx-auto">
+          <div className="w-10 h-10 rounded-xl bg-[#292524] text-[#B8860B] flex items-center justify-center font-bold text-xl animate-pulse mx-auto border border-[#B8860B]/30">
             AJ
           </div>
           <div className="text-xs font-bold text-[#1C1917]">
@@ -74,12 +74,14 @@ function AppContent() {
       {/* Main App Layout */}
       <div className="flex flex-1 min-h-0 relative">
         
-        {/* Navigation Sidebar */}
+        {/* Navigation Sidebar Drawer */}
         <Sidebar
           currentTab={currentTab}
           setCurrentTab={setCurrentTab}
           isMobileOpen={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          onOpenAddModal={() => setIsAddModalOpen(true)}
+          onOpenPrintModal={() => setIsPrintModalOpen(true)}
         />
 
         {/* Main Content Area */}
