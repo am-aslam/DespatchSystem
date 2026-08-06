@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -19,9 +19,12 @@ export default function SubItemsListModal({
   onClose,
   parentBatch,
 }) {
-  const { deleteSubItem, updateSubItem, toggleItemVerification, calculateNetWeight } =
+  const { deleteSubItem, updateSubItem, toggleItemVerification, calculateNetWeight, fetchBatchItems } =
     useDispatch();
   const { isAdmin, isManager } = useAuth();
+
+  const [subItems, setSubItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Sub-item editing state
   const [editingSubItem, setEditingSubItem] = useState(null);
@@ -30,6 +33,15 @@ export default function SubItemsListModal({
   const [editGross, setEditGross] = useState("");
   const [editStone, setEditStone] = useState("0");
   const [editPearl, setEditPearl] = useState("0");
+
+  useEffect(() => {
+    if (isOpen && parentBatch?.batchNo) {
+      setIsLoading(true);
+      fetchBatchItems(parentBatch.batchNo)
+        .then((items) => setSubItems(items))
+        .finally(() => setIsLoading(false));
+    }
+  }, [isOpen, parentBatch]);
 
   if (!parentBatch) return null;
 
@@ -71,7 +83,7 @@ export default function SubItemsListModal({
           <div className="flex items-center gap-2">
             <ListBulletIcon className="w-5 h-5 text-[#292524]" />
             <span>
-              Dispatch Breakdown — {parentBatch.batchNo} ({parentBatch.items.length} Items)
+              Dispatch Breakdown — {parentBatch.batchNo} ({subItems.length} Items)
             </span>
           </div>
 
@@ -85,7 +97,7 @@ export default function SubItemsListModal({
           </Button>
         </div>
       }
-      subtitle="Detailed ornament-level Breakdown Table for Admin and Manager inspection."
+      subtitle="Detailed ornament-level breakdown table fetched directly from backend API for Admin and Manager inspection."
       maxWidth="max-w-5xl"
     >
       <div className="space-y-4">
@@ -109,8 +121,14 @@ export default function SubItemsListModal({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E3DA]">
-              {parentBatch.items.length > 0 ? (
-                parentBatch.items.map((item, idx) => {
+              {isLoading ? (
+                <tr>
+                  <td colSpan={11} className="p-8 text-center text-stone-500 font-bold">
+                    Loading ornament breakdown from server...
+                  </td>
+                </tr>
+              ) : subItems.length > 0 ? (
+                subItems.map((item, idx) => {
                   const adWeight = Math.max(0, (item.stoneWeight || 0) - (item.pearlWeight || 0));
                   return (
                     <tr

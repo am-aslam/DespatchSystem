@@ -10,6 +10,7 @@ export function DispatchProvider({ children }) {
   const { currentUser } = useAuth();
 
   const [batches, setBatches] = useState([]);
+  const [allItemizedOrnaments, setAllItemizedOrnaments] = useState([]);
   const [salesHistory, setSalesHistory] = useState([]);
   const [trash, setTrash] = useState([]);
 
@@ -37,78 +38,50 @@ export function DispatchProvider({ children }) {
   const fetchAllData = useCallback(async () => {
     if (!currentUser) return;
     try {
-      // 1. Fetch Dispatches
+      // 1. Fetch Dispatches from SQL backend
       const dispatchesRes = await axios.get(
         `/api/dispatches?search=${encodeURIComponent(searchQuery)}&date=${dateFilter}`
       );
       if (dispatchesRes.data?.success) {
-        const rawItems = dispatchesRes.data.data?.items || [];
-        
-        // Group raw items by Base Dispatch Number for Admin / Manager Grouped View
-        const batchMap = new Map();
+        const payload = dispatchesRes.data.data;
 
-        rawItems.forEach((item) => {
-          const parts = item.item_number.split("-");
-          const baseBatchNo = parts.length > 2 ? parts.slice(0, 2).join("-") : item.item_number;
-          const assignedStaff = item.assigned_users?.map((u) => u.name || u.full_name) || [];
-
-          if (!batchMap.has(baseBatchNo)) {
-            batchMap.set(baseBatchNo, {
-              id: baseBatchNo,
-              batchNo: baseBatchNo,
+        if (payload?.isGrouped) {
+          // SQL Grouped Data from Backend (One Object Per Dispatch)
+          const rawGroups = payload.items || [];
+          setBatches(
+            rawGroups.map((g) => ({
+              id: g.batch_no,
+              batchNo: g.batch_no,
               name: "Gold Ornaments Lot",
-              assignedSalespeople: [...assignedStaff],
-              date: item.created_at,
+              assignedSalespeople: g.assigned_users?.map((u) => u.name) || [],
+              assignedStaffNames: g.assigned_staff_names || "Unassigned",
+              date: g.created_at,
               status: "Active",
-              grossWeight: 0,
-              stoneWeight: 0,
-              pearlWeight: 0,
-              netWeight: 0,
+              grossWeight: g.gross_weight,
+              stoneWeight: g.stone_weight,
+              pearlWeight: g.pearl_weight,
+              adWeight: g.ad_weight,
+              netWeight: g.net_weight,
+              itemCount: g.total_items,
               items: [],
-            });
-          }
-
-          const currentBatch = batchMap.get(baseBatchNo);
-
-          const g = parseFloat(item.gross_weight) || 0;
-          const s = parseFloat(item.stone_weight) || 0;
-          const p = parseFloat(item.pearl_weight) || 0;
-          const n = parseFloat(item.net_weight) || 0;
-
-          currentBatch.grossWeight += g;
-          currentBatch.stoneWeight += s;
-          currentBatch.pearlWeight += p;
-          currentBatch.netWeight += n;
-
-          assignedStaff.forEach((sp) => {
-            if (!currentBatch.assignedSalespeople.includes(sp)) {
-              currentBatch.assignedSalespeople.push(sp);
-            }
-          });
-
-          currentBatch.items.push({
+            }))
+          );
+        } else {
+          // Individual Ornament Data (for Salespersons)
+          const rawItems = payload?.items || [];
+          const formattedItems = rawItems.map((item) => ({
             id: item.id.toString(),
             itemNo: item.item_number,
             name: "Gold Ornament",
-            grossWeight: g,
-            stoneWeight: s,
-            pearlWeight: p,
-            netWeight: n,
+            grossWeight: item.gross_weight,
+            stoneWeight: item.stone_weight,
+            pearlWeight: item.pearl_weight,
+            netWeight: item.net_weight,
             isVerified: Boolean(item.is_verified),
-            assignedSalespeople: assignedStaff,
-          });
-        });
-
-        const formattedBatches = Array.from(batchMap.values()).map((b) => ({
-          ...b,
-          itemCount: b.items.length,
-          grossWeight: parseFloat(b.grossWeight.toFixed(3)),
-          stoneWeight: parseFloat(b.stoneWeight.toFixed(3)),
-          pearlWeight: parseFloat(b.pearlWeight.toFixed(3)),
-          netWeight: parseFloat(b.netWeight.toFixed(3)),
-        }));
-
-        setBatches(formattedBatches);
+            assignedSalespeople: item.assigned_users?.map((u) => u.name || u.full_name) || [],
+          }));
+          setAllItemizedOrnaments(formattedItems);
+        }
       }
 
       // 2. Fetch Sales History
@@ -160,23 +133,35 @@ export function DispatchProvider({ children }) {
     fetchAllData();
   }, [fetchAllData]);
 
+  // Fetch ornament-level items for List Access Modal via API
+  const fetchBatchItems = async (batchNo) => {
+    try {
+      const res = await axios.get(`/api/dispatches/${encodeURIComponent(batchNo)}`);
+      if (res.data?.success) {
+        return (res.data.data || []).map((item) => ({
+          id: item.id.toString(),
+          itemNo: item.item_number,
+          name: "Gold Ornament",
+          grossWeight: item.gross_weight,
+          stoneWeight: item.stone_weight,
+          pearlWeight: item.pearl_weight,
+          netWeight: item.net_weight,
+          isVerified: Boolean(item.is_verified),
+          assignedSalespeople: item.assigned_users?.map((u) => u.name || u.full_name) || [],
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch batch sub-items:", err);
+    }
+    return [];
+  };
+
   const toggleItemVerification = (batchId, itemId) => {
     const targetItemId = itemId || batchId;
-    setBatches((prev) =>
-      prev.map((batch) => {
-        const hasItem = batch.items.some((i) => i.id === targetItemId);
-        if (hasItem) {
-          return {
-            ...batch,
-            items: batch.items.map((item) =>
-              item.id === targetItemId
-                ? { ...item, isVerified: !item.isVerified }
-                : item
-            ),
-          };
-        }
-        return batch;
-      })
+    setAllItemizedOrnaments((prev) =>
+      prev.map((item) =>
+        item.id === targetItemId ? { ...item, isVerified: !item.isVerified } : item
+      )
     );
   };
 
@@ -211,15 +196,7 @@ export function DispatchProvider({ children }) {
   // Direct Delete Batch (Admin / Manager)
   const deleteBatch = async (batchId) => {
     try {
-      const targetBatch = batches.find((b) => b.id === batchId);
-      if (targetBatch && targetBatch.items?.length > 0) {
-        for (const item of targetBatch.items) {
-          await axios.delete(`/api/dispatches/${item.id}`);
-        }
-      } else {
-        await axios.delete(`/api/dispatches/${batchId}`);
-      }
-
+      await axios.delete(`/api/dispatches/${encodeURIComponent(batchId)}`);
       setBatches((prev) => prev.filter((b) => b.id !== batchId));
       setSelectedBatchIds((prev) => prev.filter((id) => id !== batchId));
       showToast("Moved batch to trash", "success");
@@ -319,22 +296,19 @@ export function DispatchProvider({ children }) {
     });
   }, [batches, assignedFilter]);
 
-  const allItemizedOrnaments = useMemo(() => {
-    const list = [];
-    filteredBatches.forEach((batch) => {
-      batch.items.forEach((item) => {
-        list.push({
-          ...item,
-          batchId: batch.id,
-          batchNo: batch.batchNo,
-          assignedSalespeople: batch.assignedSalespeople,
-        });
-      });
-    });
-    return list;
-  }, [filteredBatches]);
-
   const totals = useMemo(() => {
+    if (batches.length > 0) {
+      return batches.reduce(
+        (acc, b) => {
+          acc.grossWeight += b.grossWeight || 0;
+          acc.stoneWeight += b.stoneWeight || 0;
+          acc.pearlWeight += b.pearlWeight || 0;
+          acc.netWeight += b.netWeight || 0;
+          return acc;
+        },
+        { grossWeight: 0, stoneWeight: 0, pearlWeight: 0, netWeight: 0 }
+      );
+    }
     return allItemizedOrnaments.reduce(
       (acc, item) => {
         acc.grossWeight += item.grossWeight || 0;
@@ -345,7 +319,7 @@ export function DispatchProvider({ children }) {
       },
       { grossWeight: 0, stoneWeight: 0, pearlWeight: 0, netWeight: 0 }
     );
-  }, [allItemizedOrnaments]);
+  }, [batches, allItemizedOrnaments]);
 
   const value = {
     batches: filteredBatches,
@@ -379,6 +353,7 @@ export function DispatchProvider({ children }) {
     deleteSaleItem,
     assignSalespeopleToBatches,
     fetchAllData,
+    fetchBatchItems,
     toast,
     showToast,
     closeToast,

@@ -18,6 +18,21 @@ export class DispatchController {
       const page = parseInt(searchParams.get("page") || "1", 10);
       const limit = parseInt(searchParams.get("limit") || "50", 10);
 
+      // Return SQL Grouped Dispatches for Admin and Manager
+      if (user.role === "ADMIN" || user.role === "MANAGER") {
+        const groupedData = DispatchModel.getGroupedDispatches({
+          search,
+          salespersonId,
+          dateFilter,
+        });
+
+        return successResponse(
+          { items: groupedData, isGrouped: true },
+          "Grouped dispatches fetched successfully"
+        );
+      }
+
+      // Return individual ornament items for Salesperson
       const result = DispatchModel.getDispatches({
         userId: user.id,
         userRole: user.role,
@@ -61,7 +76,6 @@ export class DispatchController {
         created_by: user.id,
       });
 
-      // Handle user assignments
       const assignedUserIds = body.assigned_user_ids || [user.id];
       if (assignedUserIds.length > 0) {
         AssignmentModel.assignUsersToDispatch(newDispatch.id, assignedUserIds);
@@ -70,7 +84,7 @@ export class DispatchController {
       ActivityLogModel.log(
         user.id,
         "Created Dispatch",
-        `User ${user.name} created dispatch item ${item_number} (${net}g Net Wt)`
+        `User ${user.name || user.full_name} created dispatch item ${item_number} (${net}g Net Wt)`
       );
 
       const completeItem = DispatchModel.findById(newDispatch.id);
@@ -82,12 +96,17 @@ export class DispatchController {
 
   static async getOne(id, user) {
     try {
+      // Check if id corresponds to a batch string (e.g. GLD-2352) or item ID
+      if (isNaN(id) || id.startsWith("GLD-")) {
+        const batchItems = DispatchModel.getItemsByBatch(id);
+        return successResponse(batchItems, "Detailed dispatch ornaments fetched successfully");
+      }
+
       const dispatch = DispatchModel.findById(id);
       if (!dispatch) {
         return errorResponse("Dispatch item not found.", 404);
       }
 
-      // Salesperson authorization check
       if (user.role === "SALESPERSON") {
         const isAssigned = dispatch.assigned_users.some((u) => u.id === user.id);
         if (!isAssigned) {
@@ -129,7 +148,7 @@ export class DispatchController {
       ActivityLogModel.log(
         user.id,
         "Updated Dispatch",
-        `User ${user.name} updated dispatch item ${updated.item_number}`
+        `User ${user.name || user.full_name} updated dispatch item ${updated.item_number}`
       );
 
       return successResponse(DispatchModel.findById(id), "Dispatch item updated successfully");
@@ -141,15 +160,22 @@ export class DispatchController {
   static async deleteDispatch(req, id, user) {
     try {
       const { searchParams } = new URL(req.url);
-      const status = searchParams.get("status")?.toUpperCase(); // 'SOLD' or 'DROP'
+      const status = searchParams.get("status")?.toUpperCase();
 
       const existing = DispatchModel.findById(id);
       if (!existing) {
+        // Try deleting batch if id is a batch string
+        const batchItems = DispatchModel.getItemsByBatch(id);
+        if (batchItems.length > 0) {
+          for (const item of batchItems) {
+            DispatchModel.delete(item.id);
+          }
+          return successResponse(null, "Grouped dispatch deleted successfully");
+        }
         return errorResponse("Dispatch item not found.", 404);
       }
 
       if (status === "SOLD" || status === "DROP") {
-        // Sold vs Drop flow
         const result = DispatchService.handleDispatchDelete({
           dispatch_id: id,
           status,
@@ -157,12 +183,11 @@ export class DispatchController {
         });
         return successResponse(result, `Dispatch item marked as ${status} successfully`);
       } else {
-        // Direct deletion (Admin/Manager)
         DispatchModel.delete(id);
         ActivityLogModel.log(
           user.id,
           "Deleted Dispatch",
-          `User ${user.name} deleted dispatch item ${existing.item_number}`
+          `User ${user.name || user.full_name} deleted dispatch item ${existing.item_number}`
         );
         return successResponse(null, "Dispatch item deleted successfully");
       }
@@ -187,7 +212,7 @@ export class DispatchController {
       ActivityLogModel.log(
         user.id,
         "Assigned Dispatch",
-        `User ${user.name} assigned ${dispatch_ids.length} dispatch(es) to ${user_ids.length} salesperson(s)`
+        `User ${user.name || user.full_name} assigned ${dispatch_ids.length} dispatch(es) to ${user_ids.length} salesperson(s)`
       );
 
       return successResponse(null, "Dispatches assigned successfully");
