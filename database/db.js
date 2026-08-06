@@ -184,6 +184,8 @@ export function initDB() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
+    `);
+
     // 9. Speed Indexes for ultra-fast query performance
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_dispatch_items_dispatch ON dispatch_items(dispatch_id);
