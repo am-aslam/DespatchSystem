@@ -116,119 +116,122 @@ export default function DispatchTable({ onOpenAddModal }) {
                 <th className="px-4 py-3 font-bold">Ornament Description</th>
                 <th className="px-4 py-3 font-bold">Assigned Staff</th>
                 <th className="px-4 py-3 font-bold text-right">Gross Wt (g)</th>
-                <th className="px-4 py-3 font-bold text-right">Stone Wt (g)</th>
+                <th className="px-4 py-3 font-bold text-right">AD Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-right">Pearl Wt (g)</th>
-                <th className="px-4 py-3 font-bold text-right">Net Weight (g)</th>
+                <th className="px-4 py-3 font-bold text-right">Net Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E3DA] bg-white">
               {batches.length > 0 ? (
-                batches.map((batch) => (
-                  <tr
-                    key={batch.id}
-                    className={`hover:bg-[#FAF8F5] transition-colors ${
-                      selectedBatchIds.includes(batch.id) ? "bg-[#F5F2EC]/60" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedBatchIds.includes(batch.id)}
-                        onChange={() => toggleSelectBatch(batch.id)}
-                        className="w-4 h-4 text-[#292524] rounded border-[#E7E3DA] focus:ring-[#292524] cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
-                      {batch.batchNo}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-[#1C1917] flex items-center gap-2">
-                        <span>{batch.name}</span>
-                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-[#F5F2EC] text-[#44403C] border border-[#E7E3DA]">
-                          {batch.itemCount} Items
+                batches.map((batch) => {
+                  const adWeight = Math.max(0, (batch.stoneWeight || 0) - (batch.pearlWeight || 0));
+                  return (
+                    <tr
+                      key={batch.id}
+                      className={`hover:bg-[#FAF8F5] transition-colors ${
+                        selectedBatchIds.includes(batch.id) ? "bg-[#F5F2EC]/60" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedBatchIds.includes(batch.id)}
+                          onChange={() => toggleSelectBatch(batch.id)}
+                          className="w-4 h-4 text-[#292524] rounded border-[#E7E3DA] focus:ring-[#292524] cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
+                        {batch.batchNo}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-[#1C1917] flex items-center gap-2">
+                          <span>{batch.name}</span>
+                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-[#F5F2EC] text-[#44403C] border border-[#E7E3DA]">
+                            {batch.itemCount} Items
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {batch.assignedSalespeople?.map((sp) => (
+                            <Badge key={sp} variant="stone" size="sm">
+                              {sp}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-[#1C1917] text-sm">
+                        {batch.grossWeight.toFixed(3)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#B8860B] text-sm">
+                        {adWeight.toFixed(3)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-sky-800 text-sm">
+                        {batch.pearlWeight.toFixed(3)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-extrabold text-[#1C1917] text-sm">
+                        <span className="bg-[#F5F2EC] px-2.5 py-1 rounded-md border border-[#D6CEBE] inline-block">
+                          {batch.netWeight.toFixed(3)}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {batch.assignedSalespeople?.map((sp) => (
-                          <Badge key={sp} variant="stone" size="sm">
-                            {sp}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-[#1C1917] text-sm">
-                      {batch.grossWeight.toFixed(3)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-amber-800 text-sm">
-                      {batch.stoneWeight.toFixed(3)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-sky-800 text-sm">
-                      {batch.pearlWeight.toFixed(3)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-extrabold text-[#1C1917] text-sm">
-                      <span className="bg-[#F5F2EC] px-2.5 py-1 rounded-md border border-[#D6CEBE] inline-block">
-                        {batch.netWeight.toFixed(3)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {/* LIST ACCESS BUTTON */}
-                        <button
-                          onClick={() => setListAccessBatchId(batch.id)}
-                          className="px-2.5 py-1 rounded bg-[#292524] text-white text-xs font-semibold hover:bg-[#1C1917] flex items-center gap-1 transition-colors shadow-xs"
-                          title="View sub-items list"
-                        >
-                          <QueueListIcon className="w-3.5 h-3.5" />
-                          <span>List Access</span>
-                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* LIST ACCESS BUTTON */}
+                          <button
+                            onClick={() => setListAccessBatchId(batch.id)}
+                            className="px-2.5 py-1 rounded bg-[#292524] text-white text-xs font-semibold hover:bg-[#1C1917] flex items-center gap-1 transition-colors shadow-xs"
+                            title="View sub-items list"
+                          >
+                            <QueueListIcon className="w-3.5 h-3.5" />
+                            <span>List Access</span>
+                          </button>
 
-                        {/* Edit Button */}
-                        <button
-                          onClick={() => {
-                            setEditingItem(batch);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1.5 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
-                          title="Edit Batch"
-                        >
-                          <PencilSquareIcon className="w-4 h-4" />
-                        </button>
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => {
+                              setEditingItem(batch);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1.5 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
+                            title="Edit Batch"
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
 
-                        {/* Print Tag Button */}
-                        <button
-                          onClick={() => {
-                            setSinglePrintItem({
-                              itemNo: batch.batchNo,
-                              name: batch.name,
-                              grossWeight: batch.grossWeight,
-                              stoneWeight: batch.stoneWeight,
-                              pearlWeight: batch.pearlWeight,
-                              netWeight: batch.netWeight,
-                              assignedSalespeople: batch.assignedSalespeople,
-                            });
-                            setIsSinglePrintModalOpen(true);
-                          }}
-                          className="p-1.5 rounded text-stone-600 hover:text-[#15803D] hover:bg-[#FAF8F5]"
-                          title="Print Tag"
-                        >
-                          <PrinterIcon className="w-4 h-4" />
-                        </button>
+                          {/* Print Tag Button */}
+                          <button
+                            onClick={() => {
+                              setSinglePrintItem({
+                                itemNo: batch.batchNo,
+                                name: batch.name,
+                                grossWeight: batch.grossWeight,
+                                stoneWeight: batch.stoneWeight,
+                                pearlWeight: batch.pearlWeight,
+                                netWeight: batch.netWeight,
+                                assignedSalespeople: batch.assignedSalespeople,
+                              });
+                              setIsSinglePrintModalOpen(true);
+                            }}
+                            className="p-1.5 rounded text-stone-600 hover:text-[#15803D] hover:bg-[#FAF8F5]"
+                            title="Print Tag"
+                          >
+                            <PrinterIcon className="w-4 h-4" />
+                          </button>
 
-                        {/* Direct Delete Button (No Popup for Admin) */}
-                        <button
-                          onClick={() => deleteBatch(batch.id)}
-                          className="p-1.5 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
-                          title="Delete Batch Directly"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {/* Direct Delete Button */}
+                          <button
+                            onClick={() => deleteBatch(batch.id)}
+                            className="p-1.5 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
+                            title="Delete Batch Directly"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center bg-white">
@@ -248,7 +251,7 @@ export default function DispatchTable({ onOpenAddModal }) {
           </table>
         )}
 
-        {/* VIEW 2: SALESPERSON FULL ITEMIZED TABLE (With Edit & Delete Sold/Drop Flow) */}
+        {/* VIEW 2: SALESPERSON FULL ITEMIZED TABLE */}
         {isSalesperson && (
           <table className="w-full text-left border-collapse min-w-[850px] text-xs">
             <thead className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
@@ -259,97 +262,100 @@ export default function DispatchTable({ onOpenAddModal }) {
                 <th className="px-4 py-3 font-bold">Ornament Description</th>
                 <th className="px-4 py-3 font-bold">Assigned Staff</th>
                 <th className="px-4 py-3 font-bold text-right">Gross Wt (g)</th>
-                <th className="px-4 py-3 font-bold text-right">Stone Wt (g)</th>
+                <th className="px-4 py-3 font-bold text-right">AD Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-right">Pearl Wt (g)</th>
-                <th className="px-4 py-3 font-bold text-right">Net Weight (g)</th>
+                <th className="px-4 py-3 font-bold text-right">Net Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E3DA] bg-white">
               {allItemizedOrnaments.length > 0 ? (
-                allItemizedOrnaments.map((item, idx) => (
-                  <tr
-                    key={item.id}
-                    className={`transition-colors ${
-                      item.isVerified ? "bg-[#15803D]/5" : "hover:bg-[#FAF8F5]"
-                    }`}
-                  >
-                    {/* Verification Tick Checkbox */}
-                    <td className="px-3 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(item.isVerified)}
-                        onChange={() => toggleItemVerification(item.batchId, item.id)}
-                        className="w-4 h-4 text-[#15803D] rounded border-[#E7E3DA] focus:ring-[#15803D] cursor-pointer"
-                        title="Tick after verifying weight on physical scale"
-                      />
-                    </td>
-                    <td className="px-3 py-3 font-bold text-stone-500">{idx + 1}</td>
-                    <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
-                      {item.itemNo}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`font-semibold text-[#1C1917] ${item.isVerified ? "line-through text-stone-500" : ""}`}>
-                        {item.name}
-                      </span>
-                      {item.isVerified && (
-                        <span className="ml-2 text-[10px] font-bold text-[#15803D] bg-[#15803D]/10 px-1.5 py-0.5 rounded">
-                          VERIFIED
+                allItemizedOrnaments.map((item, idx) => {
+                  const adWeight = Math.max(0, (item.stoneWeight || 0) - (item.pearlWeight || 0));
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        item.isVerified ? "bg-[#15803D]/5" : "hover:bg-[#FAF8F5]"
+                      }`}
+                    >
+                      {/* Verification Tick Checkbox */}
+                      <td className="px-3 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.isVerified)}
+                          onChange={() => toggleItemVerification(item.batchId, item.id)}
+                          className="w-4 h-4 text-[#15803D] rounded border-[#E7E3DA] focus:ring-[#15803D] cursor-pointer"
+                          title="Tick after verifying weight on physical scale"
+                        />
+                      </td>
+                      <td className="px-3 py-3 font-bold text-stone-500">{idx + 1}</td>
+                      <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
+                        {item.itemNo}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`font-semibold text-[#1C1917] ${item.isVerified ? "line-through text-stone-500" : ""}`}>
+                          {item.name}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {item.assignedSalespeople?.map((sp) => (
-                          <Badge key={sp} variant="stone" size="sm">
-                            {sp}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-[#1C1917]">
-                      {item.grossWeight.toFixed(3)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-amber-800">
-                      {item.stoneWeight.toFixed(3)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-sky-800">
-                      {item.pearlWeight.toFixed(3)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-extrabold text-[#1C1917]">
-                      <span className="bg-[#F5F2EC] px-2 py-0.5 rounded border border-[#D6CEBE]">
-                        {item.netWeight.toFixed(3)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {/* Edit Button for Sales Staff */}
-                        <button
-                          onClick={() => {
-                            setEditingItem(item);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
-                          title="Edit Ornament"
-                        >
-                          <PencilSquareIcon className="w-4 h-4" />
-                        </button>
+                        {item.isVerified && (
+                          <span className="ml-2 text-[10px] font-bold text-[#15803D] bg-[#15803D]/10 px-1.5 py-0.5 rounded">
+                            VERIFIED
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {item.assignedSalespeople?.map((sp) => (
+                            <Badge key={sp} variant="stone" size="sm">
+                              {sp}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-[#1C1917]">
+                        {item.grossWeight.toFixed(3)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#B8860B]">
+                        {adWeight.toFixed(3)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-sky-800">
+                        {item.pearlWeight.toFixed(3)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-extrabold text-[#1C1917]">
+                        <span className="bg-[#F5F2EC] px-2 py-0.5 rounded border border-[#D6CEBE]">
+                          {item.netWeight.toFixed(3)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Edit Button for Sales Staff */}
+                          <button
+                            onClick={() => {
+                              setEditingItem(item);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1 rounded text-stone-600 hover:text-[#1C1917] hover:bg-[#FAF8F5]"
+                            title="Edit Ornament"
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
 
-                        {/* Delete Button for Sales Staff (Triggers Sold vs Drop Popup) */}
-                        <button
-                          onClick={() => {
-                            setDeletingSalesItem(item);
-                            setIsDeleteModalOpen(true);
-                          }}
-                          className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
-                          title="Delete Ornament (Triggers Sold or Drop choice)"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {/* Delete Button for Sales Staff */}
+                          <button
+                            onClick={() => {
+                              setDeletingSalesItem(item);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            className="p-1 rounded text-[#DC2626] hover:bg-[#DC2626]/10"
+                            title="Delete Ornament (Triggers Sold or Drop choice)"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={10} className="px-6 py-12 text-center bg-white text-stone-500">
