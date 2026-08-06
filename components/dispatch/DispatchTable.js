@@ -254,12 +254,11 @@ export default function DispatchTable({ onOpenAddModal }) {
 
         {/* VIEW 2: SALESPERSON FULL ITEMIZED TABLE */}
         {isSalesperson && (
-          <table className="w-full text-left border-collapse min-w-[580px] text-xs">
+          <table className="w-full text-left border-collapse min-w-[480px] text-xs">
             <thead className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
               <tr>
                 <th className="px-3 py-3 font-bold text-center">Verify Wt</th>
                 <th className="px-3 py-3 font-bold">#</th>
-                <th className="px-4 py-3 font-bold">Item No</th>
                 <th className="px-4 py-3 font-bold text-right">Gross Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-right">AD Wt (g)</th>
                 <th className="px-4 py-3 font-bold text-right">Pearl Wt (g)</th>
@@ -288,14 +287,6 @@ export default function DispatchTable({ onOpenAddModal }) {
                         />
                       </td>
                       <td className="px-3 py-3 font-bold text-stone-500">{idx + 1}</td>
-                      <td className="px-4 py-3 font-extrabold text-[#1C1917] text-sm">
-                        {item.itemNo}
-                        {item.isVerified && (
-                          <span className="ml-2 text-[10px] font-bold text-[#15803D] bg-[#15803D]/10 px-1.5 py-0.5 rounded">
-                            ✓
-                          </span>
-                        )}
-                      </td>
                       <td className="px-4 py-3 text-right font-bold text-[#1C1917]">
                         {item.grossWeight.toFixed(3)}
                       </td>
@@ -342,7 +333,7 @@ export default function DispatchTable({ onOpenAddModal }) {
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center bg-white text-stone-500">
+                  <td colSpan={7} className="px-6 py-12 text-center bg-white text-stone-500">
                     No assigned ornaments found.
                   </td>
                 </tr>
