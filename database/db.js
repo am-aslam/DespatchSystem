@@ -71,7 +71,7 @@ export function initDB() {
     db.exec(`
       CREATE TABLE IF NOT EXISTS dispatch_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        dispatch_id INTEGER NOT NULL,
+        dispatch_id INTEGER,
         item_number TEXT NOT NULL,
         gross_weight REAL NOT NULL,
         stone_weight REAL NOT NULL DEFAULT 0.0,
@@ -94,6 +94,15 @@ export function initDB() {
         UNIQUE(dispatch_id, user_id)
       );
     `);
+
+    // Safe Schema Column Migrations for existing databases
+    try {
+      db.exec("ALTER TABLE dispatch_items ADD COLUMN dispatch_id INTEGER REFERENCES dispatches(id) ON DELETE CASCADE;");
+    } catch (e) {}
+
+    try {
+      db.exec("ALTER TABLE dispatch_items ADD COLUMN pearl_weight REAL DEFAULT 0.0;");
+    } catch (e) {}
 
     // 5. SalesHistory Table
     db.exec(`
