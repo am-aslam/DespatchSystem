@@ -68,15 +68,6 @@ export default function SubItemsListModal({
     setEditingSubItem(null);
   };
 
-  // Dedicated Print Handler targeting the List Access Breakdown Table
-  const handlePrintBatchList = () => {
-    document.body.classList.add("printing-breakdown");
-    window.print();
-    setTimeout(() => {
-      document.body.classList.remove("printing-breakdown");
-    }, 500);
-  };
-
   const computedNet = calculateNetWeight(editGross, editStone);
 
   // Calculate totals for this breakdown
@@ -96,12 +87,116 @@ export default function SubItemsListModal({
     { gross: 0, stone: 0, pearl: 0, ad: 0, net: 0 }
   );
 
+  // Bulletproof Dedicated Window Print Handler for List Access Breakdown Table
+  const handlePrintBatchList = () => {
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Dispatch Breakdown — ${parentBatch.batchNo}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; color: #1C1917; }
+            h1 { font-size: 20px; font-weight: 900; margin: 0 0 4px 0; }
+            .header-flex { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1C1917; padding-bottom: 10px; margin-bottom: 16px; }
+            .meta { font-size: 12px; color: #44403C; line-height: 1.5; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+            th, td { border: 1px solid #1C1917; padding: 8px 10px; text-align: left; }
+            th { background-color: #FAF8F5; font-weight: bold; color: #1C1917; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            tfoot { background-color: #1C1917; color: #FFFFFF; font-weight: 800; }
+            tfoot td { border-color: #1C1917; }
+            @page { size: A4; margin: 10mm; }
+          </style>
+        </head>
+        <body>
+          <div class="header-flex">
+            <div>
+              <h1>AURUM JEWELLERS — DISPATCH BREAKDOWN SHEET</h1>
+              <div class="meta">
+                Dispatch Lot: <strong>${parentBatch.batchNo}</strong> &nbsp;|&nbsp; Total Items: <strong>${subItems.length}</strong><br/>
+                Assigned Staff: <strong>${parentBatch.assignedStaffNames || parentBatch.assignedSalespeople?.join(", ")}</strong>
+              </div>
+            </div>
+            <div class="meta" style="text-align: right;">
+              Printed Date: <strong>${new Date().toLocaleDateString("en-IN")}</strong>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th class="text-center">#</th>
+                <th>Item No</th>
+                <th>Assigned Staff</th>
+                <th class="text-right">Gross Wt (g)</th>
+                <th class="text-right">Total Stone (g)</th>
+                <th class="text-right">AD Wt (g)</th>
+                <th class="text-right">Pearl Wt (g)</th>
+                <th class="text-right">Net Wt (g)</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${subItems
+                .map((item, idx) => {
+                  const adWeight = Math.max(0, (item.stoneWeight || 0) - (item.pearlWeight || 0));
+                  return `
+                    <tr>
+                      <td class="text-center font-bold">${idx + 1}</td>
+                      <td><strong>${item.itemNo}</strong></td>
+                      <td>${item.assignedSalespeople?.join(", ") || parentBatch.assignedStaffNames}</td>
+                      <td class="text-right">${item.grossWeight.toFixed(3)}</td>
+                      <td class="text-right">${item.stoneWeight.toFixed(3)}</td>
+                      <td class="text-right">${adWeight.toFixed(3)}</td>
+                      <td class="text-right">${item.pearlWeight.toFixed(3)}</td>
+                      <td class="text-right"><strong>${item.netWeight.toFixed(3)}</strong></td>
+                      <td class="text-center">${item.isVerified ? "VERIFIED" : "ACTIVE"}</td>
+                    </tr>
+                  `;
+                })
+                .join("")}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" class="text-right" style="text-transform: uppercase;">Total Dispatch Summary:</td>
+                <td class="text-right">${subTotals.gross.toFixed(3)}g</td>
+                <td class="text-right">${subTotals.stone.toFixed(3)}g</td>
+                <td class="text-right">${subTotals.ad.toFixed(3)}g</td>
+                <td class="text-right">${subTotals.pearl.toFixed(3)}g</td>
+                <td class="text-right" style="font-size: 13px;">${subTotals.net.toFixed(3)}g</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } else {
+      window.print();
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={
-        <div className="flex items-center justify-between w-full pr-6 no-print">
+        <div className="flex items-center justify-between w-full pr-6">
           <div className="flex items-center gap-2">
             <ListBulletIcon className="w-5 h-5 text-[#292524]" />
             <span>
@@ -124,75 +219,8 @@ export default function SubItemsListModal({
     >
       <div className="space-y-4">
         
-        {/* PRINT-ONLY BREAKDOWN CONTAINER (Printed when clicking Print Breakdown) */}
-        <div className="print-only p-4 bg-white text-black font-sans text-xs space-y-4">
-          <div className="flex items-center justify-between border-b-2 border-black pb-2">
-            <div>
-              <h1 className="text-xl font-black tracking-tight">
-                AURUM JEWELLERS — DISPATCH BREAKDOWN SHEET
-              </h1>
-              <p className="text-xs text-gray-700 mt-1">
-                Dispatch Lot: <strong>{parentBatch.batchNo}</strong> | Total Items: <strong>{subItems.length}</strong>
-              </p>
-              <p className="text-xs text-gray-700">
-                Assigned Staff: <strong>{parentBatch.assignedStaffNames || parentBatch.assignedSalespeople?.join(", ")}</strong>
-              </p>
-            </div>
-            <div className="text-right text-xs">
-              <p>Printed Date: {new Date().toLocaleDateString("en-IN")}</p>
-            </div>
-          </div>
-
-          <table className="w-full text-left border-collapse border border-black text-xs">
-            <thead>
-              <tr className="bg-gray-100 border-b border-black">
-                <th className="p-2 border-r border-black text-center font-bold">#</th>
-                <th className="p-2 border-r border-black font-bold">Item No</th>
-                <th className="p-2 border-r border-black font-bold">Assigned Staff</th>
-                <th className="p-2 border-r border-black font-bold text-right">Gross Wt (g)</th>
-                <th className="p-2 border-r border-black font-bold text-right">Total Stone (g)</th>
-                <th className="p-2 border-r border-black font-bold text-right">AD Wt (g)</th>
-                <th className="p-2 border-r border-black font-bold text-right">Pearl Wt (g)</th>
-                <th className="p-2 border-r border-black font-bold text-right">Net Wt (g)</th>
-                <th className="p-2 font-bold text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subItems.map((item, idx) => {
-                const adWeight = Math.max(0, (item.stoneWeight || 0) - (item.pearlWeight || 0));
-                return (
-                  <tr key={item.id} className="border-b border-gray-300">
-                    <td className="p-2 border-r border-black text-center font-bold">{idx + 1}</td>
-                    <td className="p-2 border-r border-black font-extrabold">{item.itemNo}</td>
-                    <td className="p-2 border-r border-black">{item.assignedSalespeople?.join(", ") || parentBatch.assignedStaffNames}</td>
-                    <td className="p-2 border-r border-black text-right font-bold">{item.grossWeight.toFixed(3)}</td>
-                    <td className="p-2 border-r border-black text-right">{item.stoneWeight.toFixed(3)}</td>
-                    <td className="p-2 border-r border-black text-right">{adWeight.toFixed(3)}</td>
-                    <td className="p-2 border-r border-black text-right">{item.pearlWeight.toFixed(3)}</td>
-                    <td className="p-2 border-r border-black text-right font-black">{item.netWeight.toFixed(3)}</td>
-                    <td className="p-2 text-center font-bold">{item.isVerified ? "VERIFIED" : "ACTIVE"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="bg-black text-white font-black text-xs">
-                <td colSpan={3} className="p-2.5 text-right uppercase tracking-wider">
-                  Total Dispatch Summary:
-                </td>
-                <td className="p-2.5 text-right">{subTotals.gross.toFixed(3)}g</td>
-                <td className="p-2.5 text-right">{subTotals.stone.toFixed(3)}g</td>
-                <td className="p-2.5 text-right">{subTotals.ad.toFixed(3)}g</td>
-                <td className="p-2.5 text-right">{subTotals.pearl.toFixed(3)}g</td>
-                <td className="p-2.5 text-right font-black">{subTotals.net.toFixed(3)}g</td>
-                <td className="p-2.5"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* SCREEN VIEW: Table View of Sub-Items */}
-        <div className="no-print border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[420px] overflow-y-auto">
+        {/* Table View of Sub-Items */}
+        <div className="border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[420px] overflow-y-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917] sticky top-0">
               <tr>
@@ -315,7 +343,7 @@ export default function SubItemsListModal({
 
         {/* Edit Sub-Item Drawer */}
         {editingSubItem && (
-          <form onSubmit={handleSaveSubItem} className="no-print p-4 bg-[#FAF8F5] border border-[#E7E3DA] rounded-xl space-y-3">
+          <form onSubmit={handleSaveSubItem} className="p-4 bg-[#FAF8F5] border border-[#E7E3DA] rounded-xl space-y-3">
             <div className="text-xs font-bold text-[#1C1917] uppercase">
               Editing Ornament {editingSubItem.itemNo}
             </div>
@@ -372,7 +400,7 @@ export default function SubItemsListModal({
         )}
 
         {/* Modal Actions */}
-        <div className="flex justify-between items-center pt-2 no-print">
+        <div className="flex justify-between items-center pt-2">
           <Button
             variant="outline"
             size="sm"
