@@ -1,7 +1,6 @@
 import { DispatchModel } from "@/models/DispatchModel";
 import { AssignmentModel } from "@/models/AssignmentModel";
 import { calculateNetWeight } from "@/services/weightService";
-import { validateDispatchInput } from "@/utils/validation";
 import { successResponse, errorResponse } from "@/utils/response";
 import { ActivityLogModel } from "@/models/ActivityLogModel";
 import { DispatchService } from "@/services/dispatchService";
@@ -13,12 +12,8 @@ export class DispatchController {
       const search = searchParams.get("search") || "";
       const salespersonId = searchParams.get("salesperson_id");
       const dateFilter = searchParams.get("date") || "ALL";
-      const sortBy = searchParams.get("sortBy") || "created_at";
-      const sortOrder = searchParams.get("sortOrder") || "DESC";
-      const page = parseInt(searchParams.get("page") || "1", 10);
-      const limit = parseInt(searchParams.get("limit") || "50", 10);
 
-      // Return SQL Grouped Dispatches for Admin and Manager
+      // Return SQL Grouped Dispatches (One Object Per Dispatch) for Admin and Manager
       if (user.role === "ADMIN" || user.role === "MANAGER") {
         const groupedData = DispatchModel.getGroupedDispatches({
           search,
@@ -39,10 +34,6 @@ export class DispatchController {
         search,
         salespersonId,
         dateFilter,
-        sortBy,
-        sortOrder,
-        page,
-        limit,
       });
 
       return successResponse(result, "Dispatch items fetched successfully");
@@ -51,107 +42,51 @@ export class DispatchController {
     }
   }
 
+  // Create a new Dispatch containing multiple ornaments (Batch Workflow)
   static async createDispatch(req, user) {
     try {
       const body = await req.json();
-      const validationErrors = validateDispatchInput(body);
-      if (validationErrors.length > 0) {
-        return errorResponse("Validation failed", 400, validationErrors);
-      }
-
-      const gross = parseFloat(body.gross_weight);
-      const stone = parseFloat(body.stone_weight || 0);
-      const pearl = parseFloat(body.pearl_weight || 0);
-      const net = calculateNetWeight(gross, stone);
 
       const randNo = Math.floor(1000 + Math.random() * 9000);
-      const item_number = body.item_number || `GLD-${randNo}`;
+      const dispatch_no = body.dispatch_no || body.item_number || `GLD-${randNo}`;
+      const assigned_user_ids = body.assigned_user_ids || [user.id];
 
-      const newDispatch = DispatchModel.create({
-        item_number,
-        gross_weight: gross,
-        stone_weight: stone,
-        pearl_weight: pearl,
-        net_weight: net,
+      // Handle batch items array or single item input
+      const itemsList = Array.isArray(body.items) && body.items.length > 0
+        ? body.items
+        : [
+            {
+              itemNo: `${dispatch_no}-1`,
+              grossWeight: body.gross_weight,
+              stoneWeight: body.stone_weight || 0,
+              pearlWeight: body.pearl_weight || 0,
+            },
+          ];
+
+      const newDispatch = DispatchModel.createBatch({
+        dispatch_no,
         created_by: user.id,
+        assigned_user_ids,
+        items: itemsList,
       });
-
-      const assignedUserIds = body.assigned_user_ids || [user.id];
-      if (assignedUserIds.length > 0) {
-        AssignmentModel.assignUsersToDispatch(newDispatch.id, assignedUserIds);
-      }
 
       ActivityLogModel.log(
         user.id,
-        "Created Dispatch",
-        `User ${user.name || user.full_name} created dispatch item ${item_number} (${net}g Net Wt)`
+        "Created Dispatch Batch",
+        `User ${user.name || user.full_name} created dispatch batch ${dispatch_no} (${itemsList.length} items)`
       );
 
-      const completeItem = DispatchModel.findById(newDispatch.id);
-      return successResponse(completeItem, "Dispatch item created successfully", 201);
+      return successResponse(newDispatch, "Dispatch batch created successfully", 201);
     } catch (err) {
       return errorResponse(err.message, 500);
     }
   }
 
+  // Get detailed ornament list for a dispatch batch (List Access Endpoint)
   static async getOne(id, user) {
     try {
-      // Check if id corresponds to a batch string (e.g. GLD-2352) or item ID
-      if (isNaN(id) || id.startsWith("GLD-")) {
-        const batchItems = DispatchModel.getItemsByBatch(id);
-        return successResponse(batchItems, "Detailed dispatch ornaments fetched successfully");
-      }
-
-      const dispatch = DispatchModel.findById(id);
-      if (!dispatch) {
-        return errorResponse("Dispatch item not found.", 404);
-      }
-
-      if (user.role === "SALESPERSON") {
-        const isAssigned = dispatch.assigned_users.some((u) => u.id === user.id);
-        if (!isAssigned) {
-          return errorResponse("Access denied.", 403);
-        }
-      }
-
-      return successResponse(dispatch, "Dispatch item details");
-    } catch (err) {
-      return errorResponse(err.message, 500);
-    }
-  }
-
-  static async updateDispatch(req, id, user) {
-    try {
-      const body = await req.json();
-      const existing = DispatchModel.findById(id);
-      if (!existing) {
-        return errorResponse("Dispatch item not found.", 404);
-      }
-
-      const gross = body.gross_weight !== undefined ? parseFloat(body.gross_weight) : existing.gross_weight;
-      const stone = body.stone_weight !== undefined ? parseFloat(body.stone_weight) : existing.stone_weight;
-      const pearl = body.pearl_weight !== undefined ? parseFloat(body.pearl_weight) : existing.pearl_weight;
-      const net = calculateNetWeight(gross, stone);
-
-      const updated = DispatchModel.update(id, {
-        item_number: body.item_number || existing.item_number,
-        gross_weight: gross,
-        stone_weight: stone,
-        pearl_weight: pearl,
-        net_weight: net,
-      });
-
-      if (body.assigned_user_ids && Array.isArray(body.assigned_user_ids)) {
-        AssignmentModel.assignUsersToDispatch(id, body.assigned_user_ids);
-      }
-
-      ActivityLogModel.log(
-        user.id,
-        "Updated Dispatch",
-        `User ${user.name || user.full_name} updated dispatch item ${updated.item_number}`
-      );
-
-      return successResponse(DispatchModel.findById(id), "Dispatch item updated successfully");
+      const items = DispatchModel.getItemsByDispatchId(id);
+      return successResponse(items, "Detailed dispatch ornaments fetched successfully");
     } catch (err) {
       return errorResponse(err.message, 500);
     }
@@ -162,19 +97,6 @@ export class DispatchController {
       const { searchParams } = new URL(req.url);
       const status = searchParams.get("status")?.toUpperCase();
 
-      const existing = DispatchModel.findById(id);
-      if (!existing) {
-        // Try deleting batch if id is a batch string
-        const batchItems = DispatchModel.getItemsByBatch(id);
-        if (batchItems.length > 0) {
-          for (const item of batchItems) {
-            DispatchModel.delete(item.id);
-          }
-          return successResponse(null, "Grouped dispatch deleted successfully");
-        }
-        return errorResponse("Dispatch item not found.", 404);
-      }
-
       if (status === "SOLD" || status === "DROP") {
         const result = DispatchService.handleDispatchDelete({
           dispatch_id: id,
@@ -183,13 +105,19 @@ export class DispatchController {
         });
         return successResponse(result, `Dispatch item marked as ${status} successfully`);
       } else {
-        DispatchModel.delete(id);
+        // Direct deletion of dispatch batch or item
+        if (!isNaN(id)) {
+          DispatchModel.deleteItem(id);
+        } else {
+          DispatchModel.deleteDispatch(id);
+        }
+
         ActivityLogModel.log(
           user.id,
           "Deleted Dispatch",
-          `User ${user.name || user.full_name} deleted dispatch item ${existing.item_number}`
+          `User ${user.name || user.full_name} deleted dispatch ${id}`
         );
-        return successResponse(null, "Dispatch item deleted successfully");
+        return successResponse(null, "Dispatch deleted successfully");
       }
     } catch (err) {
       return errorResponse(err.message, 500);

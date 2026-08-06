@@ -37,27 +37,7 @@ try {
 // Initialize Database Schema
 export function initDB() {
   try {
-    // Disable foreign keys during migration checks
     db.pragma("foreign_keys = OFF");
-
-    // Check if users table exists and contains employee_id column
-    const usersExists = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-      .get();
-
-    if (usersExists) {
-      const columns = db.prepare("PRAGMA table_info(users)").all();
-      const hasEmpId = columns.some((c) => c.name === "employee_id");
-      if (!hasEmpId) {
-        db.exec("DROP TABLE IF EXISTS assignments");
-        db.exec("DROP TABLE IF EXISTS dispatch_items");
-        db.exec("DROP TABLE IF EXISTS sales_history");
-        db.exec("DROP TABLE IF EXISTS drop_history");
-        db.exec("DROP TABLE IF EXISTS trash");
-        db.exec("DROP TABLE IF EXISTS activity_logs");
-        db.exec("DROP TABLE IF EXISTS users");
-      }
-    }
 
     // 1. Users Table
     db.exec(`
@@ -75,18 +55,11 @@ export function initDB() {
       );
     `);
 
-    // Re-enable foreign keys
-    db.pragma("foreign_keys = ON");
-
-    // 2. DispatchItems Table
+    // 2. Dispatches Table (One Dispatch = Collection of many ornaments)
     db.exec(`
-      CREATE TABLE IF NOT EXISTS dispatch_items (
+      CREATE TABLE IF NOT EXISTS dispatches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        item_number TEXT UNIQUE NOT NULL,
-        gross_weight REAL NOT NULL,
-        stone_weight REAL NOT NULL DEFAULT 0.0,
-        pearl_weight REAL NOT NULL DEFAULT 0.0,
-        net_weight REAL NOT NULL,
+        dispatch_no TEXT UNIQUE NOT NULL,
         created_by INTEGER NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -94,20 +67,35 @@ export function initDB() {
       );
     `);
 
-    // 3. Assignments Table
+    // 3. DispatchItems Table (Many Ornaments inside a Dispatch)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS dispatch_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dispatch_id INTEGER NOT NULL,
+        item_number TEXT NOT NULL,
+        gross_weight REAL NOT NULL,
+        stone_weight REAL NOT NULL DEFAULT 0.0,
+        pearl_weight REAL NOT NULL DEFAULT 0.0,
+        net_weight REAL NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (dispatch_id) REFERENCES dispatches(id) ON DELETE CASCADE
+      );
+    `);
+
+    // 4. Assignments Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS assignments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         dispatch_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (dispatch_id) REFERENCES dispatch_items(id) ON DELETE CASCADE,
+        FOREIGN KEY (dispatch_id) REFERENCES dispatches(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE(dispatch_id, user_id)
       );
     `);
 
-    // 4. SalesHistory Table
+    // 5. SalesHistory Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS sales_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,7 +110,7 @@ export function initDB() {
       );
     `);
 
-    // 5. DropHistory Table
+    // 6. DropHistory Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS drop_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -137,7 +125,7 @@ export function initDB() {
       );
     `);
 
-    // 6. Trash Table
+    // 7. Trash Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS trash (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -156,7 +144,7 @@ export function initDB() {
       );
     `);
 
-    // 7. ActivityLogs Table
+    // 8. ActivityLogs Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS activity_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -167,6 +155,8 @@ export function initDB() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
+
+    db.pragma("foreign_keys = ON");
 
     seedDefaultUsers();
   } catch (err) {
