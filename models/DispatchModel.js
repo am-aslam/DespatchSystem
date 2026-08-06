@@ -8,15 +8,19 @@ export class DispatchModel {
       VALUES (?, ?)
     `);
 
+    // Note: created_by NOT included here — dispatch_items does not have it in schema
     const insertItem = db.prepare(`
-      INSERT INTO dispatch_items (dispatch_id, item_number, gross_weight, stone_weight, pearl_weight, net_weight, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO dispatch_items (dispatch_id, item_number, gross_weight, stone_weight, pearl_weight, net_weight)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     const insertAssign = db.prepare(`
-      INSERT INTO assignments (dispatch_id, user_id)
+      INSERT OR IGNORE INTO assignments (dispatch_id, user_id)
       VALUES (?, ?)
     `);
+
+    // Verify user IDs actually exist in the users table before inserting
+    const checkUser = db.prepare(`SELECT id FROM users WHERE id = ?`);
 
     let dispatchId;
 
@@ -24,7 +28,7 @@ export class DispatchModel {
       const info = insertDispatch.run(dispatch_no, created_by);
       dispatchId = info.lastInsertRowid;
 
-      // Insert all ornaments belonging to this dispatch with created_by field
+      // Insert all ornaments belonging to this dispatch
       items.forEach((item, idx) => {
         const itemNumber = item.itemNo || `${dispatch_no}-${idx + 1}`;
         const g = parseFloat(item.grossWeight || item.gross_weight || 0);
@@ -32,12 +36,20 @@ export class DispatchModel {
         const p = parseFloat(item.pearlWeight || item.pearl_weight || 0);
         const n = parseFloat(Math.max(0, g - s).toFixed(3));
 
-        insertItem.run(dispatchId, itemNumber, g, s, p, n, created_by);
+        insertItem.run(dispatchId, itemNumber, g, s, p, n);
       });
 
-      // Insert Salesperson assignments
-      const userIds = assigned_user_ids.length > 0 ? assigned_user_ids : [created_by];
-      userIds.forEach((uId) => {
+      // Insert Salesperson assignments (only for users that actually exist in DB)
+      const rawUserIds = assigned_user_ids.length > 0 ? assigned_user_ids : [created_by];
+      const validUserIds = rawUserIds.filter((uId) => {
+        const exists = checkUser.get(uId);
+        return Boolean(exists);
+      });
+
+      // Fallback: if none resolved, assign to creating user (admin)
+      const finalUserIds = validUserIds.length > 0 ? validUserIds : [created_by];
+
+      finalUserIds.forEach((uId) => {
         insertAssign.run(dispatchId, uId);
       });
     });
