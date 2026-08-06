@@ -68,18 +68,40 @@ export default function SubItemsListModal({
     setEditingSubItem(null);
   };
 
+  // Dedicated Print Handler targeting the List Access Breakdown Table
   const handlePrintBatchList = () => {
+    document.body.classList.add("printing-breakdown");
     window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-breakdown");
+    }, 500);
   };
 
   const computedNet = calculateNetWeight(editGross, editStone);
+
+  // Calculate totals for this breakdown
+  const subTotals = subItems.reduce(
+    (acc, item) => {
+      const g = item.grossWeight || 0;
+      const s = item.stoneWeight || 0;
+      const p = item.pearlWeight || 0;
+      const n = item.netWeight || 0;
+      acc.gross += g;
+      acc.stone += s;
+      acc.pearl += p;
+      acc.ad += Math.max(0, s - p);
+      acc.net += n;
+      return acc;
+    },
+    { gross: 0, stone: 0, pearl: 0, ad: 0, net: 0 }
+  );
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={
-        <div className="flex items-center justify-between w-full pr-6">
+        <div className="flex items-center justify-between w-full pr-6 no-print">
           <div className="flex items-center gap-2">
             <ListBulletIcon className="w-5 h-5 text-[#292524]" />
             <span>
@@ -102,8 +124,75 @@ export default function SubItemsListModal({
     >
       <div className="space-y-4">
         
-        {/* Table View of Sub-Items with Full Detail Columns */}
-        <div className="border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[420px] overflow-y-auto">
+        {/* PRINT-ONLY BREAKDOWN CONTAINER (Printed when clicking Print Breakdown) */}
+        <div className="print-only p-4 bg-white text-black font-sans text-xs space-y-4">
+          <div className="flex items-center justify-between border-b-2 border-black pb-2">
+            <div>
+              <h1 className="text-xl font-black tracking-tight">
+                AURUM JEWELLERS — DISPATCH BREAKDOWN SHEET
+              </h1>
+              <p className="text-xs text-gray-700 mt-1">
+                Dispatch Lot: <strong>{parentBatch.batchNo}</strong> | Total Items: <strong>{subItems.length}</strong>
+              </p>
+              <p className="text-xs text-gray-700">
+                Assigned Staff: <strong>{parentBatch.assignedStaffNames || parentBatch.assignedSalespeople?.join(", ")}</strong>
+              </p>
+            </div>
+            <div className="text-right text-xs">
+              <p>Printed Date: {new Date().toLocaleDateString("en-IN")}</p>
+            </div>
+          </div>
+
+          <table className="w-full text-left border-collapse border border-black text-xs">
+            <thead>
+              <tr className="bg-gray-100 border-b border-black">
+                <th className="p-2 border-r border-black text-center font-bold">#</th>
+                <th className="p-2 border-r border-black font-bold">Item No</th>
+                <th className="p-2 border-r border-black font-bold">Assigned Staff</th>
+                <th className="p-2 border-r border-black font-bold text-right">Gross Wt (g)</th>
+                <th className="p-2 border-r border-black font-bold text-right">Total Stone (g)</th>
+                <th className="p-2 border-r border-black font-bold text-right">AD Wt (g)</th>
+                <th className="p-2 border-r border-black font-bold text-right">Pearl Wt (g)</th>
+                <th className="p-2 border-r border-black font-bold text-right">Net Wt (g)</th>
+                <th className="p-2 font-bold text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subItems.map((item, idx) => {
+                const adWeight = Math.max(0, (item.stoneWeight || 0) - (item.pearlWeight || 0));
+                return (
+                  <tr key={item.id} className="border-b border-gray-300">
+                    <td className="p-2 border-r border-black text-center font-bold">{idx + 1}</td>
+                    <td className="p-2 border-r border-black font-extrabold">{item.itemNo}</td>
+                    <td className="p-2 border-r border-black">{item.assignedSalespeople?.join(", ") || parentBatch.assignedStaffNames}</td>
+                    <td className="p-2 border-r border-black text-right font-bold">{item.grossWeight.toFixed(3)}</td>
+                    <td className="p-2 border-r border-black text-right">{item.stoneWeight.toFixed(3)}</td>
+                    <td className="p-2 border-r border-black text-right">{adWeight.toFixed(3)}</td>
+                    <td className="p-2 border-r border-black text-right">{item.pearlWeight.toFixed(3)}</td>
+                    <td className="p-2 border-r border-black text-right font-black">{item.netWeight.toFixed(3)}</td>
+                    <td className="p-2 text-center font-bold">{item.isVerified ? "VERIFIED" : "ACTIVE"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-black text-white font-black text-xs">
+                <td colSpan={3} className="p-2.5 text-right uppercase tracking-wider">
+                  Total Dispatch Summary:
+                </td>
+                <td className="p-2.5 text-right">{subTotals.gross.toFixed(3)}g</td>
+                <td className="p-2.5 text-right">{subTotals.stone.toFixed(3)}g</td>
+                <td className="p-2.5 text-right">{subTotals.ad.toFixed(3)}g</td>
+                <td className="p-2.5 text-right">{subTotals.pearl.toFixed(3)}g</td>
+                <td className="p-2.5 text-right font-black">{subTotals.net.toFixed(3)}g</td>
+                <td className="p-2.5"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {/* SCREEN VIEW: Table View of Sub-Items */}
+        <div className="no-print border border-[#E7E3DA] rounded-xl overflow-hidden bg-white max-h-[420px] overflow-y-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917] sticky top-0">
               <tr>
@@ -151,11 +240,15 @@ export default function SubItemsListModal({
                       </td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-1">
-                          {item.assignedSalespeople?.map((sp) => (
-                            <Badge key={sp} variant="stone" size="sm">
-                              {sp}
-                            </Badge>
-                          ))}
+                          {item.assignedSalespeople?.length > 0 ? (
+                            item.assignedSalespeople.map((sp) => (
+                              <Badge key={sp} variant="stone" size="sm">
+                                {sp}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-stone-400">{parentBatch.assignedStaffNames}</span>
+                          )}
                         </div>
                       </td>
                       <td className="p-3 text-right font-bold text-[#1C1917]">
@@ -222,7 +315,7 @@ export default function SubItemsListModal({
 
         {/* Edit Sub-Item Drawer */}
         {editingSubItem && (
-          <form onSubmit={handleSaveSubItem} className="p-4 bg-[#FAF8F5] border border-[#E7E3DA] rounded-xl space-y-3">
+          <form onSubmit={handleSaveSubItem} className="no-print p-4 bg-[#FAF8F5] border border-[#E7E3DA] rounded-xl space-y-3">
             <div className="text-xs font-bold text-[#1C1917] uppercase">
               Editing Ornament {editingSubItem.itemNo}
             </div>
@@ -279,7 +372,7 @@ export default function SubItemsListModal({
         )}
 
         {/* Modal Actions */}
-        <div className="flex justify-between items-center pt-2">
+        <div className="flex justify-between items-center pt-2 no-print">
           <Button
             variant="outline"
             size="sm"

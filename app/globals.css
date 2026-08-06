@@ -59,6 +59,13 @@
     display: block !important;
   }
 
+  body.printing-breakdown header,
+  body.printing-breakdown main,
+  body.printing-breakdown sidebar,
+  body.printing-breakdown .no-print {
+    display: none !important;
+  }
+
   @page {
     size: A4;
     margin: 12mm;
