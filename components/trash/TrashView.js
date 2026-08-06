@@ -30,8 +30,8 @@ export default function TrashView() {
       </div>
 
       {/* Trash Table (Note / Remarks replaces Date & Time column) */}
-      <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[750px] text-xs">
             <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
               <tr>
@@ -65,10 +65,14 @@ export default function TrashView() {
                     <td className="px-4 py-3 font-semibold text-[#1C1917]">
                       {item.deletedBy || "Admin"}
                     </td>
-                    <td className="px-4 py-3 text-xs font-bold text-[#1C1917]">
-                      <span className="bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E7E3DA] inline-block text-stone-800">
-                        {item.remarks || item.reason || "No Note"}
-                      </span>
+                    <td className="px-4 py-3 text-xs text-[#1C1917]">
+                      {item.remarks || item.reason ? (
+                        <span className="bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E7E3DA] inline-block text-stone-800 font-semibold max-w-[180px] break-words">
+                          {item.remarks || item.reason}
+                        </span>
+                      ) : (
+                        <span className="text-stone-400 italic text-[11px]">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-2">

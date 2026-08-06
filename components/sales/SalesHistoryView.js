@@ -187,8 +187,8 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
             <span>Sales Staff Weight Breakdown Summary</span>
           </div>
 
-          <div className="border border-[#E7E3DA] rounded-lg overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="border border-[#E7E3DA] rounded-lg overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[500px] text-xs">
               <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
                 <tr>
                   <th className="p-2.5 font-bold">Sales Staff Name</th>
@@ -231,11 +231,11 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
       )}
 
       {/* Itemized Sales Table (Note / Remarks column replaces Date column) */}
-      <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-[#E7E3DA] rounded-xl shadow-xs">
         <div className="p-3 bg-[#FAF8F5] border-b border-[#E7E3DA] font-bold text-xs text-[#1C1917]">
           Itemized Sold Ornaments Log
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[750px] text-xs">
             <thead className="bg-[#FAF8F5] border-b border-[#E7E3DA] text-[#1C1917]">
               <tr>
@@ -281,10 +281,14 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
                         {item.soldBy}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-xs font-bold text-[#1C1917]">
-                      <span className="bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E7E3DA] inline-block text-stone-800">
-                        {item.remarks || "Sold item"}
-                      </span>
+                    <td className="px-4 py-3 text-xs text-[#1C1917]">
+                      {item.remarks ? (
+                        <span className="bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E7E3DA] inline-block text-stone-800 font-semibold max-w-[180px] break-words">
+                          {item.remarks}
+                        </span>
+                      ) : (
+                        <span className="text-stone-400 italic text-[11px]">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
