@@ -26,12 +26,16 @@ export class DatabaseConnectionError extends Error {
 function getDatabaseUrl() {
   const url =
     process.env.SUPABASE_DATABASE_URL ||
+    process.env.SUPABASE_POSTGRES_URL ||
+    process.env.SUPABASE_DB_URL ||
     process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL;
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
 
   if (!url) {
     throw new DatabaseConfigurationError(
-      "SUPABASE_DATABASE_URL, DATABASE_URL, or POSTGRES_URL is required for the Supabase backend."
+      "Supabase Postgres is not configured on this deployment. Add SUPABASE_DATABASE_URL in Vercel Project Settings using the Supabase transaction pooler connection string."
     );
   }
 

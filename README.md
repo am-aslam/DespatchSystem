@@ -14,6 +14,8 @@ SUPABASE_EMPLOYEE_EMAIL_DOMAIN=aurum.local
 PGSSLMODE=require
 ```
 
+For Vercel, set `SUPABASE_DATABASE_URL` in Project Settings using the Supabase **Transaction pooler** connection string. URL-encode special password characters, for example `#` as `%23` and `@` as `%40`.
+
 For the first admin seed, also set:
 
 ```bash
