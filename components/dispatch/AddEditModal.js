@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import { useDispatch } from "@/context/DispatchContext";
-import { SALESPERSONS } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   PlusIcon,
   PencilIcon,
@@ -18,11 +18,14 @@ import {
 
 export default function AddEditModal({ isOpen, onClose, editItem }) {
   const { addBatch, addItem, updateItem, calculateNetWeight, showToast } = useDispatch();
+  const { salespersonNames } = useAuth();
+  const salespersonOptions = useMemo(() => salespersonNames || [], [salespersonNames]);
+  const draftIdCounter = useRef(0);
 
   // Shared batch settings
   const [dispatchNo, setDispatchNo] = useState("");
   const [categoryName, setCategoryName] = useState("Gold Ornament");
-  const [selectedPeople, setSelectedPeople] = useState(["SIJI CMS", "BABU"]);
+  const [selectedPeople, setSelectedPeople] = useState([]);
 
   // Current weight inputs in form
   const [grossWeight, setGrossWeight] = useState("");
@@ -75,33 +78,35 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
   // Reset or initialize on modal open
   useEffect(() => {
     if (isOpen) {
-      if (editItem) {
-        // Single Edit Mode
-        setDispatchNo(editItem.batchNo || editItem.itemNo || generateDispatchNo());
-        setCategoryName(editItem.name || "Gold Ornament");
-        setGrossWeight(editItem.grossWeight?.toString() || "");
-        setStoneWeight(editItem.stoneWeight?.toString() || "0");
-        setPearlWeight(editItem.pearlWeight?.toString() || "0");
-        setSelectedPeople(editItem.assignedSalespeople || ["SIJI CMS"]);
-        setDraftItems([]);
-      } else {
-        // Batch Add Mode
-        const newNo = generateDispatchNo();
-        setDispatchNo(newNo);
-        setCategoryName("Gold Ornament");
-        setGrossWeight("");
-        setStoneWeight("0");
-        setPearlWeight("0");
-        setSelectedPeople(["SIJI CMS", "BABU"]);
-        setDraftItems([]);
-        setEditingDraftIndex(null);
+      queueMicrotask(() => {
+        if (editItem) {
+          // Single Edit Mode
+          setDispatchNo(editItem.batchNo || editItem.itemNo || generateDispatchNo());
+          setCategoryName(editItem.name || "Gold Ornament");
+          setGrossWeight(editItem.grossWeight?.toString() || "");
+          setStoneWeight(editItem.stoneWeight?.toString() || "0");
+          setPearlWeight(editItem.pearlWeight?.toString() || "0");
+          setSelectedPeople(editItem.assignedSalespeople || []);
+          setDraftItems([]);
+        } else {
+          // Batch Add Mode
+          const newNo = generateDispatchNo();
+          setDispatchNo(newNo);
+          setCategoryName("Gold Ornament");
+          setGrossWeight("");
+          setStoneWeight("0");
+          setPearlWeight("0");
+          setSelectedPeople(salespersonOptions.slice(0, 2));
+          setDraftItems([]);
+          setEditingDraftIndex(null);
 
-        setTimeout(() => {
-          if (grossInputRef.current) grossInputRef.current.focus();
-        }, 150);
-      }
+          setTimeout(() => {
+            if (grossInputRef.current) grossInputRef.current.focus();
+          }, 150);
+        }
+      });
     }
-  }, [isOpen, editItem]);
+  }, [isOpen, editItem, salespersonOptions]);
 
   // Calculate live single item weights
   const gross = parseFloat(grossWeight) || 0;
@@ -157,9 +162,10 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
       // Add new ornament to this dispatch
       const nextNum = draftItems.length + 1;
       const itemNo = `${dispatchNo}-${nextNum}`;
+      draftIdCounter.current += 1;
 
       const newItem = {
-        id: `draft-${Date.now()}-${nextNum}`,
+        id: `draft-${draftIdCounter.current}-${nextNum}`,
         itemNo,
         name: categoryName,
         grossWeight: gross,
@@ -218,8 +224,9 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
     if (gross > 0) {
       const nextNum = finalBatch.length + 1;
       const itemNo = `${dispatchNo}-${nextNum}`;
+      draftIdCounter.current += 1;
       finalBatch.push({
-        id: `draft-${Date.now()}-${nextNum}`,
+        id: `draft-${draftIdCounter.current}-${nextNum}`,
         itemNo,
         name: categoryName,
         grossWeight: gross,
@@ -273,7 +280,7 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
               Assign Salesperson(s) *
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {SALESPERSONS.map((person) => {
+              {salespersonOptions.map((person) => {
                 const isSelected = selectedPeople.includes(person);
                 return (
                   <button
@@ -291,6 +298,11 @@ export default function AddEditModal({ isOpen, onClose, editItem }) {
                   </button>
                 );
               })}
+              {salespersonOptions.length === 0 && (
+                <span className="text-xs font-semibold text-[#DC2626] bg-[#DC2626]/10 border border-[#DC2626]/20 px-2.5 py-1.5 rounded-lg">
+                  No active salesperson accounts
+                </span>
+              )}
             </div>
           </div>
         </div>

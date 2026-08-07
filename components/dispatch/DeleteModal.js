@@ -12,8 +12,10 @@ export default function DeleteModal({ isOpen, onClose, item }) {
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedAction("sold");
-      setRemarks("");
+      queueMicrotask(() => {
+        setSelectedAction("sold");
+        setRemarks("");
+      });
     }
   }, [isOpen]);
 

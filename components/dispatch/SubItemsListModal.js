@@ -36,12 +36,16 @@ export default function SubItemsListModal({
 
   useEffect(() => {
     if (isOpen && parentBatch?.batchNo) {
-      setIsLoading(true);
-      fetchBatchItems(parentBatch.batchNo)
-        .then((items) => setSubItems(items))
-        .finally(() => setIsLoading(false));
+      const timeout = setTimeout(() => {
+        setIsLoading(true);
+        fetchBatchItems(parentBatch.batchNo)
+          .then((items) => setSubItems(items))
+          .finally(() => setIsLoading(false));
+      }, 0);
+
+      return () => clearTimeout(timeout);
     }
-  }, [isOpen, parentBatch]);
+  }, [isOpen, parentBatch, fetchBatchItems]);
 
   if (!parentBatch) return null;
 

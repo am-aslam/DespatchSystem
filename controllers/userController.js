@@ -1,122 +1,85 @@
-import { UserModel } from "@/models/UserModel";
-import { successResponse, errorResponse } from "@/utils/response";
-import { ActivityLogModel } from "@/models/ActivityLogModel";
+import { UserService } from "@/services/userService";
+import { successResponse, errorResponse, handleError } from "@/utils/response";
 
 export class UserController {
   static async listUsers(req, currentUser) {
     try {
-      const users = UserModel.getAll();
+      const { searchParams } = new URL(req.url);
+      const requestedRole = searchParams.get("role")?.toUpperCase() || null;
+
+      if (currentUser.role === "SALESPERSON") {
+        return errorResponse("Forbidden: You do not have permission to view users.", 403);
+      }
+
+      if (currentUser.role === "MANAGER" && requestedRole !== "SALESPERSON") {
+        return errorResponse("Managers can only list active salesperson accounts.", 403);
+      }
+
+      const users = await UserService.list({
+        role: requestedRole,
+        status: currentUser.role === "MANAGER" ? "ACTIVE" : searchParams.get("status"),
+      });
       return successResponse(users, "Users fetched successfully");
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Failed to fetch users.");
     }
   }
 
   static async createUser(req, currentUser) {
     try {
       const body = await req.json();
-      const { employee_id, full_name, email, role, status } = body;
-
-      if (!employee_id || !full_name || !role) {
-        return errorResponse("Employee ID, Full Name, and Role are required.", 400);
-      }
-
-      const existingEmp = UserModel.findByEmployeeId(employee_id.trim());
+      const existingEmp = await UserService.findByEmployeeId(body.employee_id || "");
       if (existingEmp) {
-        return errorResponse(`Employee ID '${employee_id}' is already registered.`, 400);
+        return errorResponse(`Employee ID '${body.employee_id}' is already registered.`, 400);
       }
 
-      if (email && email.trim() !== "") {
-        const existingEmail = UserModel.findByEmail(email.trim());
+      if (body.email && body.email.trim() !== "") {
+        const existingEmail = await UserService.findByEmail(body.email.trim());
         if (existingEmail) {
           return errorResponse("User with this email already exists.", 400);
         }
       }
 
-      const newUser = UserModel.create({
-        employee_id: employee_id.trim().toUpperCase(),
-        full_name: full_name.trim(),
-        email: email ? email.trim() : null,
-        role,
-        status: status || "ACTIVE",
-      });
-
-      ActivityLogModel.log(
-        currentUser.id,
-        "Created User",
-        `Admin ${currentUser.full_name || currentUser.name} created user ${newUser.employee_id} (${newUser.full_name})`
-      );
+      const newUser = await UserService.create(body, currentUser);
 
       return successResponse(newUser, "User account created successfully! Password setup required on first login.", 201);
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Failed to create user.");
     }
   }
 
   static async toggleStatus(id, currentUser) {
     try {
-      const targetUser = UserModel.findById(id);
-      if (!targetUser) {
-        return errorResponse("User not found.", 404);
-      }
-
-      const newStatus = targetUser.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-      const updated = UserModel.updateStatus(id, newStatus);
-
-      ActivityLogModel.log(
-        currentUser.id,
-        "Updated User Status",
-        `Admin ${currentUser.full_name || currentUser.name} set status of ${targetUser.employee_id} to ${newStatus}`
-      );
-
-      return successResponse(updated, `User status updated to ${newStatus}`);
+      const updated = await UserService.updateStatus(id, currentUser);
+      return successResponse(updated, `User status updated to ${updated.status}`);
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Failed to update user status.");
     }
   }
 
   static async resetUserPassword(id, currentUser) {
     try {
-      const targetUser = UserModel.findById(id);
-      if (!targetUser) {
-        return errorResponse("User not found.", 404);
-      }
-
-      const updated = UserModel.resetPassword(id);
-
-      ActivityLogModel.log(
-        currentUser.id,
-        "Password Reset",
-        `Admin ${currentUser.full_name || currentUser.name} reset password for ${targetUser.employee_id}`
-      );
+      const updated = await UserService.resetPassword(id, currentUser);
 
       return successResponse(
         updated,
-        `Password for ${targetUser.employee_id} has been reset. The user must set a new password on their next login.`
+        `Password for ${updated.employee_id} has been reset. The user must set a new password on their next login.`
       );
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Failed to reset password.");
     }
   }
 
   static async deleteUser(id, currentUser) {
     try {
-      const targetUser = UserModel.findById(id);
-      if (!targetUser) {
-        return errorResponse("User not found.", 404);
-      }
+      const result = await UserService.delete(id, currentUser);
+      const message = result.deactivated
+        ? "User has linked history, so the account was suspended instead of deleted."
+        : "User deleted successfully";
 
-      UserModel.delete(id);
-
-      ActivityLogModel.log(
-        currentUser.id,
-        "Deleted User",
-        `Admin ${currentUser.full_name || currentUser.name} deleted user ${targetUser.employee_id}`
-      );
-
-      return successResponse(null, "User deleted successfully");
+      return successResponse(result, message);
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Failed to delete user.");
     }
   }
 }

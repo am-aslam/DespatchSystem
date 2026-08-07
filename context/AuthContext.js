@@ -1,15 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import axios from "axios";
 
-export const SALESPERSONS = [
-  "SIJI CMS",
-  "MHD SHAMIL",
-  "SHAMIL VK",
-  "BABU",
-  "SHAMEER",
-];
+export const SALESPERSONS = [];
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
 
 const AuthContext = createContext();
 
@@ -18,27 +13,49 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [setupAccount, setSetupAccount] = useState(null); // Held during first-time password setup
+  const [salespeople, setSalespeople] = useState([]);
 
   // Inactivity timeout handler (30 minutes)
-  const INACTIVITY_LIMIT = 30 * 60 * 1000;
-  const [lastActivity, setLastActivity] = useState(Date.now());
+  const lastActivityRef = useRef(0);
 
   const logout = useCallback(() => {
+    const authToken = localStorage.getItem("aurum_auth_token");
+    if (authToken) {
+      axios.post("/api/auth/logout").catch(() => {});
+    }
+
     setCurrentUser(null);
     setToken(null);
     setSetupAccount(null);
+    setSalespeople([]);
     localStorage.removeItem("aurum_auth_token");
     delete axios.defaults.headers.common["Authorization"];
   }, []);
 
+  const refreshSalespeople = useCallback(async () => {
+    try {
+      const res = await axios.get("/api/users?role=SALESPERSON");
+      if (res.data?.success) {
+        setSalespeople(res.data.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch salesperson accounts:", err);
+      setSalespeople([]);
+    }
+  }, []);
+
   // Update activity timestamp on user interaction
   useEffect(() => {
-    const handleUserActivity = () => setLastActivity(Date.now());
+    lastActivityRef.current = Date.now();
+    const handleUserActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
     window.addEventListener("mousemove", handleUserActivity);
     window.addEventListener("keydown", handleUserActivity);
 
     const interval = setInterval(() => {
-      if (currentUser && Date.now() - lastActivity > INACTIVITY_LIMIT) {
+      if (currentUser && Date.now() - lastActivityRef.current > INACTIVITY_LIMIT_MS) {
         logout();
       }
     }, 60000);
@@ -48,29 +65,45 @@ export function AuthProvider({ children }) {
       window.removeEventListener("keydown", handleUserActivity);
       clearInterval(interval);
     };
-  }, [currentUser, lastActivity, logout]);
+  }, [currentUser, logout]);
 
   // Load session from stored token on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem("aurum_auth_token");
-    if (storedToken) {
-      setToken(storedToken);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
-      axios
-        .get("/api/auth/me")
-        .then((res) => {
-          if (res.data?.success && res.data?.data?.user) {
-            setCurrentUser(res.data.data.user);
-          } else {
-            logout();
-          }
-        })
-        .catch(() => logout())
-        .finally(() => setIsInitialized(true));
-    } else {
-      setIsInitialized(true);
-    }
+    const timeout = setTimeout(() => {
+      const storedToken = localStorage.getItem("aurum_auth_token");
+      if (storedToken) {
+        setToken(storedToken);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+        axios
+          .get("/api/auth/me")
+          .then((res) => {
+            if (res.data?.success && res.data?.data?.user) {
+              setCurrentUser(res.data.data.user);
+            } else {
+              logout();
+            }
+          })
+          .catch(() => logout())
+          .finally(() => setIsInitialized(true));
+      } else {
+        setIsInitialized(true);
+      }
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, [logout]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER") {
+        refreshSalespeople();
+      } else {
+        setSalespeople([]);
+      }
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [currentUser?.id, currentUser?.role, refreshSalespeople]);
 
   // Login handler using Employee ID & Password
   const login = async (employeeId, password) => {
@@ -156,6 +189,10 @@ export function AuthProvider({ children }) {
   const isAdmin = currentUser?.role === "ADMIN";
   const isManager = currentUser?.role === "MANAGER";
   const isSalesperson = currentUser?.role === "SALESPERSON";
+  const salespersonNames = useMemo(
+    () => salespeople.map((user) => user.full_name || user.name).filter(Boolean),
+    [salespeople]
+  );
 
   return (
     <AuthContext.Provider
@@ -169,6 +206,9 @@ export function AuthProvider({ children }) {
         handleSetupPassword,
         changePassword,
         logout,
+        salespeople,
+        salespersonNames,
+        refreshSalespeople,
         isAdmin,
         isManager,
         isSalesperson,

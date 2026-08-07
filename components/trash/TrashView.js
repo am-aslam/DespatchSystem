@@ -2,12 +2,14 @@
 
 import React from "react";
 import { useDispatch } from "@/context/DispatchContext";
+import { useAuth } from "@/context/AuthContext";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { TrashIcon, ArrowPathIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 export default function TrashView() {
   const { trash, restoreFromTrash, purgeFromTrash } = useDispatch();
+  const { isAdmin, isManager } = useAuth();
 
   return (
     <div className="space-y-4">
@@ -85,13 +87,15 @@ export default function TrashView() {
                         >
                           Restore
                         </Button>
-                        <button
-                          onClick={() => purgeFromTrash(item.id)}
-                          className="p-1.5 rounded-lg text-stone-400 hover:text-[#DC2626] hover:bg-[#DC2626]/10 transition-colors"
-                          title="Permanently remove item from trash"
-                        >
-                          <XCircleIcon className="w-5 h-5 stroke-[2]" />
-                        </button>
+                        {(isAdmin || isManager) && (
+                          <button
+                            onClick={() => purgeFromTrash(item.id)}
+                            className="p-1.5 rounded-lg text-stone-400 hover:text-[#DC2626] hover:bg-[#DC2626]/10 transition-colors"
+                            title="Permanently remove item from trash"
+                          >
+                            <XCircleIcon className="w-5 h-5 stroke-[2]" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

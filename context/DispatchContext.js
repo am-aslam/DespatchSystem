@@ -21,12 +21,14 @@ export function DispatchProvider({ children }) {
 
   const [selectedBatchIds, setSelectedBatchIds] = useState([]);
   const [toast, setToast] = useState(null);
+  const toastIdCounter = React.useRef(0);
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type, id: Date.now() });
-  };
+  const showToast = useCallback((message, type = "success") => {
+    toastIdCounter.current += 1;
+    setToast({ message, type, id: toastIdCounter.current });
+  }, []);
 
-  const closeToast = () => setToast(null);
+  const closeToast = useCallback(() => setToast(null), []);
 
   const calculateNetWeight = (gross, stone) => {
     const g = parseFloat(gross) || 0;
@@ -68,14 +70,17 @@ export function DispatchProvider({ children }) {
         } else if (dispatches?.items) {
           const rawItems = dispatches.items || [];
           const formattedItems = rawItems.map((item) => ({
-            id: item.id.toString(),
-            itemNo: item.item_number,
-            name: "Gold Ornament",
-            grossWeight: item.gross_weight,
-            stoneWeight: item.stone_weight,
-            pearlWeight: item.pearl_weight,
-            netWeight: item.net_weight,
-            isVerified: Boolean(item.is_verified),
+              id: item.id.toString(),
+              dispatchId: item.dispatch_id?.toString(),
+              batchNo: item.dispatch_no,
+              itemNo: item.item_number,
+              name: item.description || "Gold Ornament",
+              grossWeight: item.gross_weight,
+              stoneWeight: item.stone_weight,
+              pearlWeight: item.pearl_weight,
+              adWeight: item.ad_weight,
+              netWeight: item.net_weight,
+              isVerified: Boolean(item.is_verified),
             assignedSalespeople: item.assigned_users?.map((u) => u.name || u.full_name) || [],
           }));
           setAllItemizedOrnaments(formattedItems);
@@ -86,11 +91,12 @@ export function DispatchProvider({ children }) {
           setSalesHistory(
             sales.map((s) => ({
               id: s.id.toString(),
-              itemNo: s.dispatch_id ? `GLD-${s.dispatch_id}` : `SALE-${s.id}`,
-              name: "Gold Ornament",
+              itemNo: s.item_number || `SALE-${s.id}`,
+              name: s.description || "Gold Ornament",
               grossWeight: s.gross_weight,
               stoneWeight: s.stone_weight,
               pearlWeight: s.pearl_weight,
+              adWeight: s.ad_weight,
               netWeight: s.net_weight,
               soldBy: s.salesperson_name || "Sales Executive",
               soldDate: s.sale_date,
@@ -127,25 +133,35 @@ export function DispatchProvider({ children }) {
 
   // Initial fetch + 30-second polling for cross-window live sync
   useEffect(() => {
-    fetchAllData();
+    const timeout = setTimeout(() => {
+      fetchAllData();
+    }, 0);
+
     const interval = setInterval(() => {
       fetchAllData();
     }, 30000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, [fetchAllData]);
 
   // Fetch ornament-level items for List Access Modal via API
-  const fetchBatchItems = async (batchNo) => {
+  const fetchBatchItems = useCallback(async (batchNo) => {
     try {
       const res = await axios.get(`/api/dispatches/${encodeURIComponent(batchNo)}`);
       if (res.data?.success) {
         return (res.data.data || []).map((item) => ({
           id: item.id.toString(),
+          dispatchId: item.dispatch_id?.toString(),
+          batchNo: item.dispatch_no,
           itemNo: item.item_number,
-          name: "Gold Ornament",
+          name: item.description || "Gold Ornament",
           grossWeight: item.gross_weight,
           stoneWeight: item.stone_weight,
           pearlWeight: item.pearl_weight,
+          adWeight: item.ad_weight,
           netWeight: item.net_weight,
           isVerified: Boolean(item.is_verified),
           assignedSalespeople: item.assigned_users?.map((u) => u.name || u.full_name) || [],
@@ -155,15 +171,26 @@ export function DispatchProvider({ children }) {
       console.error("Failed to fetch batch sub-items:", err);
     }
     return [];
-  };
+  }, []);
 
-  const toggleItemVerification = (batchId, itemId) => {
+  const toggleItemVerification = async (batchId, itemId) => {
     const targetItemId = itemId || batchId;
-    setAllItemizedOrnaments((prev) =>
-      prev.map((item) =>
-        item.id === targetItemId ? { ...item, isVerified: !item.isVerified } : item
-      )
-    );
+    const currentItem = allItemizedOrnaments.find((item) => item.id === targetItemId);
+    const nextValue = !currentItem?.isVerified;
+
+    try {
+      await axios.put(`/api/dispatch-items/${targetItemId}`, {
+        is_verified: nextValue,
+      });
+
+      setAllItemizedOrnaments((prev) =>
+        prev.map((item) =>
+          item.id === targetItemId ? { ...item, isVerified: nextValue } : item
+        )
+      );
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to update verification", "danger");
+    }
   };
 
   // Create a single Dispatch Lot containing multiple ornaments (Single API Request)
@@ -232,17 +259,51 @@ export function DispatchProvider({ children }) {
     }
   };
 
-  const updateSubItem = (batchId, itemId, data) => {
-    showToast("Item updated successfully!", "success");
+  const updateSubItem = async (batchId, itemId, data) => {
+    try {
+      await axios.put(`/api/dispatch-items/${itemId}`, data);
+      showToast("Item updated successfully!", "success");
+      fetchAllData();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to update item", "danger");
+    }
   };
 
-  const updateItem = (id, data) => {
-    showToast("Batch updated", "success");
+  const updateItem = async (id, data) => {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        String(id)
+      );
+
+      if (isUuid) {
+        await axios.put(`/api/dispatch-items/${id}`, data);
+      } else {
+        await axios.put(`/api/dispatches/${encodeURIComponent(id)}`, {
+          dispatch_no: data.batchNo,
+          assigned_salespeople: data.assignedSalespeople,
+        });
+      }
+
+      showToast("Batch updated", "success");
+      fetchAllData();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to update batch", "danger");
+    }
   };
 
   const assignSalespeopleToBatches = async (batchIds, selectedSalespeople) => {
-    setSelectedBatchIds([]);
-    showToast(`Assigned batch(es) to ${selectedSalespeople.join(", ")}`, "success");
+    try {
+      await axios.post("/api/dispatches/assign", {
+        dispatch_ids: batchIds,
+        user_ids: selectedSalespeople,
+      });
+
+      setSelectedBatchIds([]);
+      showToast(`Assigned batch(es) to ${selectedSalespeople.join(", ")}`, "success");
+      fetchAllData();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to assign salespeople", "danger");
+    }
   };
 
   // Restore from Trash with API Persistence
@@ -267,8 +328,14 @@ export function DispatchProvider({ children }) {
     }
   };
 
-  const updateSaleItem = (saleId, updatedData) => {
-    showToast("Sales item updated!", "success");
+  const updateSaleItem = async (saleId, updatedData) => {
+    try {
+      await axios.put(`/api/sales/${saleId}`, updatedData);
+      showToast("Sales item updated!", "success");
+      fetchAllData();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to update sale", "danger");
+    }
   };
 
   const deleteSaleItem = async (saleId) => {
@@ -350,6 +417,7 @@ export function DispatchProvider({ children }) {
     updateSaleItem,
     deleteSaleItem,
     assignSalespeopleToBatches,
+    assignSalespeopleToItems: assignSalespeopleToBatches,
     fetchAllData,
     fetchBatchItems,
     toast,

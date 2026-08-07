@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useDispatch } from "@/context/DispatchContext";
-import { SALESPERSONS } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { UserGroupIcon } from "@heroicons/react/24/outline";
 
 export default function AssignSalespersonModal({
@@ -13,19 +13,22 @@ export default function AssignSalespersonModal({
   selectedItemIds,
 }) {
   const { assignSalespeopleToItems, items } = useDispatch();
+  const { salespersonNames } = useAuth();
   const [selectedPeople, setSelectedPeople] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
-      // If editing a single item, pre-check its assigned salespeople
-      if (selectedItemIds.length === 1) {
-        const item = items.find((i) => i.id === selectedItemIds[0]);
-        if (item) {
-          setSelectedPeople(item.assignedSalespeople || []);
-          return;
+      queueMicrotask(() => {
+        // If editing a single item, pre-check its assigned salespeople
+        if (selectedItemIds.length === 1) {
+          const item = items.find((i) => i.id === selectedItemIds[0]);
+          if (item) {
+            setSelectedPeople(item.assignedSalespeople || []);
+            return;
+          }
         }
-      }
-      setSelectedPeople([]);
+        setSelectedPeople([]);
+      });
     }
   }, [isOpen, selectedItemIds, items]);
 
@@ -60,7 +63,7 @@ export default function AssignSalespersonModal({
           </div>
 
           <div className="space-y-2.5">
-            {SALESPERSONS.map((person) => {
+            {salespersonNames.map((person) => {
               const isChecked = selectedPeople.includes(person);
               return (
                 <label
@@ -91,6 +94,11 @@ export default function AssignSalespersonModal({
                 </label>
               );
             })}
+            {salespersonNames.length === 0 && (
+              <div className="p-4 rounded-xl border border-[#DC2626]/20 bg-[#DC2626]/10 text-[#DC2626] text-xs font-bold">
+                No active salesperson accounts found.
+              </div>
+            )}
           </div>
         </div>
 

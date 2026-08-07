@@ -1,8 +1,7 @@
-import { UserModel } from "@/models/UserModel";
-import { comparePassword, hashPassword } from "@/utils/password";
-import { generateToken } from "@/utils/jwt";
-import { successResponse, errorResponse } from "@/utils/response";
-import { ActivityLogModel } from "@/models/ActivityLogModel";
+import { getSupabaseAdmin } from "@/database/supabase";
+import { UserService } from "@/services/userService";
+import { ActivityService } from "@/services/activityService";
+import { successResponse, errorResponse, handleError } from "@/utils/response";
 
 export class AuthController {
   static async login(req) {
@@ -14,19 +13,19 @@ export class AuthController {
         return errorResponse("Employee ID is required.", 400);
       }
 
-      const user = UserModel.findByEmployeeId(employee_id.trim());
+      const user = await UserService.findByEmployeeId(employee_id.trim());
       if (!user) {
         return errorResponse("Invalid Employee ID or Password.", 401);
       }
 
       // Check Status
       if (user.status === "INACTIVE") {
-        ActivityLogModel.log(user.id, "Failed Login", `Suspended user ${user.employee_id} attempted login.`);
+        await ActivityService.log(user.id, "Failed Login", `Suspended user ${user.employee_id} attempted login.`);
         return errorResponse("Account is suspended. Please contact your administrator.", 403);
       }
 
       // First-time Password Setup Check
-      if (!user.password_hash || user.first_login === 1) {
+      if (user.first_login === 1) {
         return successResponse(
           {
             requires_setup: true,
@@ -42,23 +41,18 @@ export class AuthController {
         return errorResponse("Password is required.", 400);
       }
 
-      // Verify Password
-      const isMatch = comparePassword(password, user.password_hash);
-      if (!isMatch) {
-        ActivityLogModel.log(user.id, "Failed Login", `Failed login attempt for Employee ID ${user.employee_id}.`);
+      const { data, error } = await getSupabaseAdmin().auth.signInWithPassword({
+        email: user.auth_email,
+        password,
+      });
+
+      if (error || !data?.session?.access_token) {
+        await ActivityService.log(user.id, "Failed Login", `Failed login attempt for Employee ID ${user.employee_id}.`);
         return errorResponse("Invalid Employee ID or Password.", 401);
       }
 
-      // Generate JWT Token
-      const token = generateToken({
-        id: user.id,
-        employee_id: user.employee_id,
-        email: user.email,
-        role: user.role,
-      });
-
       // Log successful login
-      ActivityLogModel.log(user.id, "User Logged In", `User ${user.full_name} (${user.employee_id}) logged in successfully.`);
+      await ActivityService.log(user.id, "User Logged In", `User ${user.full_name} (${user.employee_id}) logged in successfully.`);
 
       return successResponse(
         {
@@ -70,12 +64,13 @@ export class AuthController {
             role: user.role,
             status: user.status,
           },
-          token,
+          token: data.session.access_token,
+          expires_at: data.session.expires_at,
         },
         "Login successful"
       );
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Login failed.");
     }
   }
 
@@ -96,7 +91,7 @@ export class AuthController {
         return errorResponse("Passwords do not match.", 400);
       }
 
-      const user = UserModel.findByEmployeeId(employee_id);
+      const user = await UserService.findByEmployeeId(employee_id);
       if (!user) {
         return errorResponse("Employee account not found.", 404);
       }
@@ -105,15 +100,31 @@ export class AuthController {
         return errorResponse("Account is suspended.", 403);
       }
 
-      // Hash password and save
-      const passwordHash = hashPassword(new_password);
-      UserModel.setPassword(user.id, passwordHash);
+      if (user.first_login !== 1) {
+        return errorResponse("Password has already been created for this account.", 409);
+      }
 
-      ActivityLogModel.log(user.id, "Password Created", `First-time password set for Employee ID ${user.employee_id}.`);
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(user.id, {
+        password: new_password,
+        email_confirm: true,
+        user_metadata: {
+          employee_id: user.employee_id,
+          name: user.full_name,
+          role: user.role,
+          requires_password_setup: false,
+        },
+      });
+
+      if (error) {
+        return errorResponse(error.message, 400);
+      }
+
+      await UserService.markPasswordCreated(user.id);
+      await ActivityService.log(user.id, "Password Created", `First-time password set for Employee ID ${user.employee_id}.`);
 
       return successResponse(null, "Password created successfully! You can now log in with your new password.");
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Password setup failed.");
     }
   }
 
@@ -126,8 +137,12 @@ export class AuthController {
         return errorResponse("All fields are required.", 400);
       }
 
-      const fullUser = UserModel.findByEmployeeId(user.employee_id);
-      if (!fullUser || !comparePassword(current_password, fullUser.password_hash)) {
+      const signIn = await getSupabaseAdmin().auth.signInWithPassword({
+        email: user.auth_email,
+        password: current_password,
+      });
+
+      if (signIn.error || !signIn.data?.user) {
         return errorResponse("Incorrect current password.", 400);
       }
 
@@ -139,14 +154,40 @@ export class AuthController {
         return errorResponse("Passwords do not match.", 400);
       }
 
-      const newHash = hashPassword(new_password);
-      UserModel.setPassword(user.id, newHash);
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(user.id, {
+        password: new_password,
+        user_metadata: {
+          employee_id: user.employee_id,
+          name: user.full_name,
+          role: user.role,
+          requires_password_setup: false,
+        },
+      });
 
-      ActivityLogModel.log(user.id, "Password Changed", `User ${user.employee_id} changed their password.`);
+      if (error) {
+        return errorResponse(error.message, 400);
+      }
+
+      await UserService.markPasswordCreated(user.id);
+      await ActivityService.log(user.id, "Password Changed", `User ${user.employee_id} changed their password.`);
 
       return successResponse(null, "Password changed successfully.");
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Password change failed.");
+    }
+  }
+
+  static async logout(user) {
+    try {
+      await ActivityService.log(
+        user.id,
+        "User Logged Out",
+        `User ${user.full_name || user.name} (${user.employee_id}) logged out.`
+      );
+
+      return successResponse(null, "Logout successful");
+    } catch (err) {
+      return handleError(err, "Logout failed.");
     }
   }
 

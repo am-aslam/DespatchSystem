@@ -1,5 +1,5 @@
-import { ActivityLogModel } from "@/models/ActivityLogModel";
-import { successResponse, errorResponse } from "@/utils/response";
+import { ActivityService } from "@/services/activityService";
+import { successResponse, handleError } from "@/utils/response";
 
 export class LogController {
   static async listLogs(req, user) {
@@ -8,14 +8,14 @@ export class LogController {
       const limit = parseInt(searchParams.get("limit") || "100", 10);
       const userId = searchParams.get("user_id");
 
-      const logs = ActivityLogModel.getLogs({
+      const logs = await ActivityService.list({
         limit,
         userId: user.role === "SALESPERSON" ? user.id : userId,
       });
 
       return successResponse(logs, "Activity logs fetched successfully");
     } catch (err) {
-      return errorResponse(err.message, 500);
+      return handleError(err, "Failed to fetch activity logs.");
     }
   }
 }

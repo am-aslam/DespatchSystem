@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useDispatch } from "@/context/DispatchContext";
-import { useAuth, SALESPERSONS } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -19,7 +19,7 @@ import {
 export default function SalesHistoryView({ onOpenPrintModal }) {
   const { salesHistory, updateSaleItem, deleteSaleItem, calculateNetWeight } =
     useDispatch();
-  const { isAdmin, isManager } = useAuth();
+  const { isAdmin, isManager, salespersonNames } = useAuth();
 
   // Edit Sale Modal state
   const [editingSale, setEditingSale] = useState(null);
@@ -49,7 +49,7 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
   const salesByStaff = useMemo(() => {
     const map = {};
 
-    SALESPERSONS.forEach((sp) => {
+    salespersonNames.forEach((sp) => {
       map[sp] = {
         staffName: sp,
         itemCount: 0,
@@ -80,7 +80,7 @@ export default function SalesHistoryView({ onOpenPrintModal }) {
     });
 
     return Object.values(map);
-  }, [salesHistory]);
+  }, [salesHistory, salespersonNames]);
 
   const openEditModal = (sale) => {
     setEditingSale(sale);

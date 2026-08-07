@@ -1,22 +1,20 @@
 import { authenticate } from "@/middleware/authMiddleware";
 import { authorize } from "@/middleware/roleMiddleware";
-import { TrashController } from "@/controllers/trashController";
+import { DispatchController } from "@/controllers/dispatchController";
 
-export async function POST(req, { params }) {
+export async function GET(req) {
   const { user, error } = await authenticate(req);
   if (error) return error;
 
-  const { id } = await params;
-  return TrashController.restoreTrash(id, user);
+  return DispatchController.listItems(req, user);
 }
 
-export async function DELETE(req, { params }) {
+export async function POST(req) {
   const { user, error } = await authenticate(req);
   if (error) return error;
 
   const authError = authorize(user, ["ADMIN", "MANAGER"]);
   if (authError) return authError;
 
-  const { id } = await params;
-  return TrashController.purgeTrash(id, user);
+  return DispatchController.createItem(req, user);
 }

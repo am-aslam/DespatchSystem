@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import Badge from "@/components/ui/Badge";
@@ -36,7 +36,7 @@ export default function UserManagementView() {
   // Toast / feedback message
   const [actionFeedback, setActionFeedback] = useState(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await axios.get("/api/users");
@@ -48,13 +48,17 @@ export default function UserManagementView() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (isAdmin) {
-      fetchUsers();
+      const timeout = setTimeout(() => {
+        fetchUsers();
+      }, 0);
+
+      return () => clearTimeout(timeout);
     }
-  }, [isAdmin]);
+  }, [isAdmin, fetchUsers]);
 
   const handleCreateUser = async (e) => {
     e.preventDefault();

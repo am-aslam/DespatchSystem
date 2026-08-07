@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useEffect } from "react";
+import axios from "axios";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -14,10 +16,43 @@ export default function SettingsView() {
   const [address, setAddress] = useState("Gold Bazaar Road, Zaveri Market, Mumbai");
   const [gstin, setGstin] = useState("27AAAAA0000A1Z5");
   const [decimals, setDecimals] = useState("3");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    axios
+      .get("/api/settings")
+      .then((res) => {
+        if (res.data?.success) {
+          const settings = res.data.data || {};
+          setCompanyName(settings.company_name || "AURUM JEWELLERS PVT LTD");
+          setAddress(settings.address || "Gold Bazaar Road, Zaveri Market, Mumbai");
+          setGstin(settings.gstin || "27AAAAA0000A1Z5");
+          setDecimals(settings.weight_decimals || "3");
+        }
+      })
+      .catch((err) => {
+        showToast(err.response?.data?.message || "Failed to load settings", "danger");
+      });
+  }, [showToast]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    showToast("System settings updated successfully!", "success");
+    setIsSaving(true);
+
+    try {
+      await axios.put("/api/settings", {
+        company_name: companyName,
+        address,
+        gstin,
+        weight_decimals: decimals,
+      });
+
+      showToast("System settings updated successfully!", "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to update settings", "danger");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -93,7 +128,7 @@ export default function SettingsView() {
 
         <div className="flex justify-end">
           <Button variant="primary" size="md" type="submit">
-            Save System Settings
+            {isSaving ? "Saving..." : "Save System Settings"}
           </Button>
         </div>
 
